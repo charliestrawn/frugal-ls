@@ -10,6 +10,7 @@ import (
 	"github.com/tliron/glsp/server"
 
 	"frugal-lsp/internal/document"
+	"frugal-lsp/internal/features"
 )
 
 const (
@@ -19,9 +20,15 @@ const (
 
 // Server represents the Frugal LSP server
 type Server struct {
-	server      *server.Server
-	docManager  *document.Manager
-	logger      *log.Logger
+	server         *server.Server
+	docManager     *document.Manager
+	logger         *log.Logger
+	
+	// Language feature providers
+	completionProvider      *features.CompletionProvider
+	hoverProvider          *features.HoverProvider
+	documentSymbolProvider *features.DocumentSymbolProvider
+	definitionProvider     *features.DefinitionProvider
 }
 
 // NewServer creates a new Frugal LSP server
@@ -35,21 +42,30 @@ func NewServer() (*Server, error) {
 	// Create logger
 	logger := log.New(os.Stderr, "[frugal-lsp] ", log.LstdFlags)
 
-	// Create the server
+	// Create the server with language feature providers
 	lspServer := &Server{
-		docManager: docManager,
-		logger:     logger,
+		docManager:             docManager,
+		logger:                 logger,
+		completionProvider:     features.NewCompletionProvider(),
+		hoverProvider:         features.NewHoverProvider(),
+		documentSymbolProvider: features.NewDocumentSymbolProvider(),
+		definitionProvider:    features.NewDefinitionProvider(),
 	}
 
 	// Set up GLSP server
 	handler := protocol.Handler{
-		Initialize:             lspServer.initialize,
-		Initialized:            lspServer.initialized,
-		Shutdown:               lspServer.shutdown,
-		TextDocumentDidOpen:    lspServer.textDocumentDidOpen,
-		TextDocumentDidChange:  lspServer.textDocumentDidChange,
-		TextDocumentDidClose:   lspServer.textDocumentDidClose,
-		TextDocumentDidSave:    lspServer.textDocumentDidSave,
+		Initialize:                lspServer.initialize,
+		Initialized:               lspServer.initialized,
+		Shutdown:                  lspServer.shutdown,
+		TextDocumentDidOpen:       lspServer.textDocumentDidOpen,
+		TextDocumentDidChange:     lspServer.textDocumentDidChange,
+		TextDocumentDidClose:      lspServer.textDocumentDidClose,
+		TextDocumentDidSave:       lspServer.textDocumentDidSave,
+		TextDocumentCompletion:    lspServer.textDocumentCompletion,
+		TextDocumentHover:         lspServer.textDocumentHover,
+		TextDocumentDocumentSymbol: lspServer.textDocumentDocumentSymbol,
+		TextDocumentDefinition:    lspServer.textDocumentDefinition,
+		WorkspaceSymbol:          lspServer.workspaceSymbol,
 	}
 
 	serverInstance := server.NewServer(&handler, LanguageServerName, false)
@@ -190,11 +206,106 @@ func (s *Server) getServerCapabilities() protocol.ServerCapabilities {
 			},
 		},
 		
-		// Future capabilities to be implemented in Phase 3
-		HoverProvider:      &[]bool{false}[0],
-		CompletionProvider: nil,
-		DocumentSymbolProvider: &[]bool{false}[0],
-		DefinitionProvider: &[]bool{false}[0],
-		WorkspaceSymbolProvider: &[]bool{false}[0],
+		// Language features
+		HoverProvider:      &[]bool{true}[0],
+		CompletionProvider: &protocol.CompletionOptions{
+			TriggerCharacters: []string{".", ":", " "},
+		},
+		DocumentSymbolProvider: &[]bool{true}[0],
+		DefinitionProvider:     &[]bool{true}[0],
+		WorkspaceSymbolProvider: &[]bool{true}[0],
 	}
+}
+
+// textDocumentCompletion handles completion requests
+func (s *Server) textDocumentCompletion(context *glsp.Context, params *protocol.CompletionParams) (any, error) {
+	doc, exists := s.docManager.GetDocument(params.TextDocument.URI)
+	if !exists || !doc.IsValidFrugalFile() {
+		return nil, nil
+	}
+	
+	completions, err := s.completionProvider.ProvideCompletion(doc, params.Position)
+	if err != nil {
+		s.logger.Printf("Error providing completions: %v", err)
+		return nil, err
+	}
+	
+	s.logger.Printf("Providing %d completions for %s", len(completions), params.TextDocument.URI)
+	return completions, nil
+}
+
+// textDocumentHover handles hover requests
+func (s *Server) textDocumentHover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
+	doc, exists := s.docManager.GetDocument(params.TextDocument.URI)
+	if !exists || !doc.IsValidFrugalFile() {
+		return nil, nil
+	}
+	
+	hover, err := s.hoverProvider.ProvideHover(doc, params.Position)
+	if err != nil {
+		s.logger.Printf("Error providing hover: %v", err)
+		return nil, err
+	}
+	
+	if hover != nil {
+		s.logger.Printf("Providing hover for %s", params.TextDocument.URI)
+	}
+	return hover, nil
+}
+
+// textDocumentDocumentSymbol handles document symbol requests
+func (s *Server) textDocumentDocumentSymbol(context *glsp.Context, params *protocol.DocumentSymbolParams) (any, error) {
+	doc, exists := s.docManager.GetDocument(params.TextDocument.URI)
+	if !exists || !doc.IsValidFrugalFile() {
+		return nil, nil
+	}
+	
+	symbols, err := s.documentSymbolProvider.ProvideDocumentSymbols(doc)
+	if err != nil {
+		s.logger.Printf("Error providing document symbols: %v", err)
+		return nil, err
+	}
+	
+	s.logger.Printf("Providing %d document symbols for %s", len(symbols), params.TextDocument.URI)
+	return symbols, nil
+}
+
+// textDocumentDefinition handles go-to-definition requests
+func (s *Server) textDocumentDefinition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
+	doc, exists := s.docManager.GetDocument(params.TextDocument.URI)
+	if !exists || !doc.IsValidFrugalFile() {
+		return nil, nil
+	}
+	
+	// Get all documents for cross-file navigation
+	allDocuments := s.getAllDocuments()
+	
+	locations, err := s.definitionProvider.ProvideDefinition(doc, params.Position, allDocuments)
+	if err != nil {
+		s.logger.Printf("Error providing definition: %v", err)
+		return nil, err
+	}
+	
+	s.logger.Printf("Providing %d definition locations for %s", len(locations), params.TextDocument.URI)
+	return locations, nil
+}
+
+// workspaceSymbol handles workspace symbol search requests
+func (s *Server) workspaceSymbol(context *glsp.Context, params *protocol.WorkspaceSymbolParams) ([]protocol.SymbolInformation, error) {
+	// Get all documents
+	allDocuments := s.getAllDocuments()
+	
+	symbols, err := s.documentSymbolProvider.ProvideWorkspaceSymbols(params.Query, allDocuments)
+	if err != nil {
+		s.logger.Printf("Error providing workspace symbols: %v", err)
+		return nil, err
+	}
+	
+	s.logger.Printf("Providing %d workspace symbols for query '%s'", len(symbols), params.Query)
+	return symbols, nil
+}
+
+// getAllDocuments returns all currently managed documents
+func (s *Server) getAllDocuments() map[string]*document.Document {
+	return s.docManager.GetAllDocuments()
 }

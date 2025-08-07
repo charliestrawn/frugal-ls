@@ -181,6 +181,20 @@ func (m *Manager) GetDocument(uri string) (*Document, bool) {
 	return doc, exists
 }
 
+// GetAllDocuments returns a copy of all currently managed documents
+func (m *Manager) GetAllDocuments() map[string]*Document {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	
+	// Return a copy to avoid concurrent access issues
+	allDocuments := make(map[string]*Document, len(m.documents))
+	for uri, doc := range m.documents {
+		allDocuments[uri] = doc
+	}
+	
+	return allDocuments
+}
+
 // parseDocument parses a document and updates its cached results
 func (m *Manager) parseDocument(doc *Document) error {
 	// Only parse .frugal files
