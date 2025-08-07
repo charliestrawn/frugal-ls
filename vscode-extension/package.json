@@ -1,12 +1,12 @@
 {
-  "name": "frugal-lsp",
+  "name": "frugal-ls",
   "displayName": "Frugal IDL Language Support",
   "description": "Language support for Frugal IDL files with syntax highlighting, completion, hover information, and more",
   "version": "0.1.0",
-  "publisher": "frugal-lsp",
+  "publisher": "frugal-ls",
   "repository": {
     "type": "git",
-    "url": "https://github.com/charliestrawn/frugal-lsp"
+    "url": "https://github.com/charliestrawn/frugal-ls"
   },
   "engines": {
     "vscode": "^1.63.0"
@@ -49,17 +49,17 @@
       "type": "object",
       "title": "Frugal LSP Configuration",
       "properties": {
-        "frugal-lsp.server.path": {
+        "frugal-ls.server.path": {
           "type": "string",
-          "default": "frugal-lsp",
-          "description": "Path to the frugal-lsp executable"
+          "default": "frugal-ls",
+          "description": "Path to the frugal-ls executable"
         },
-        "frugal-lsp.server.args": {
+        "frugal-ls.server.args": {
           "type": "array",
           "default": [],
-          "description": "Arguments to pass to the frugal-lsp server"
+          "description": "Arguments to pass to the frugal-ls server"
         },
-        "frugal-lsp.trace.server": {
+        "frugal-ls.trace.server": {
           "scope": "window",
           "type": "string",
           "enum": [

@@ -9,8 +9,8 @@ import (
 
 	protocol "github.com/tliron/glsp/protocol_3_16"
 
-	"frugal-lsp/internal/parser"
-	"frugal-lsp/pkg/ast"
+	"frugal-ls/internal/parser"
+	"frugal-ls/pkg/ast"
 )
 
 // Document represents an open document in the LSP server
@@ -243,7 +243,7 @@ func (d *Document) GetDiagnostics() []protocol.Diagnostic {
 				},
 			},
 			Severity: &[]protocol.DiagnosticSeverity{protocol.DiagnosticSeverityError}[0],
-			Source:   &[]string{"frugal-lsp"}[0],
+			Source:   &[]string{"frugal-ls"}[0],
 			Message:  err.Message,
 		}
 		

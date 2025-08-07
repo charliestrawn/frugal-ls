@@ -8,8 +8,8 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 
-	"frugal-lsp/internal/document"
-	"frugal-lsp/pkg/ast"
+	"frugal-ls/internal/document"
+	"frugal-ls/pkg/ast"
 )
 
 // FindNodeAtPosition finds the AST node at a specific line and character position
@@ -83,7 +83,7 @@ func (c *CodeActionProvider) getQuickFixes(doc *document.Document, diagnostics [
 	var actions []protocol.CodeAction
 	
 	for _, diagnostic := range diagnostics {
-		if diagnostic.Source != nil && *diagnostic.Source == "frugal-lsp" {
+		if diagnostic.Source != nil && *diagnostic.Source == "frugal-ls" {
 			// Handle missing closing parenthesis
 			if strings.Contains(diagnostic.Message, "Missing )") {
 				action := c.createFixMissingParenthesis(doc, diagnostic)

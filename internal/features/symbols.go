@@ -6,8 +6,8 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 
-	"frugal-lsp/internal/document"
-	"frugal-lsp/pkg/ast"
+	"frugal-ls/internal/document"
+	"frugal-ls/pkg/ast"
 )
 
 // DocumentSymbolProvider handles document symbol outline for Frugal files

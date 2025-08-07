@@ -6,9 +6,9 @@ import (
 	"os"
 
 	tree_sitter "github.com/tree-sitter/go-tree-sitter"
-	"frugal-lsp/internal/lsp"
-	"frugal-lsp/internal/parser"
-	"frugal-lsp/pkg/ast"
+	"frugal-ls/internal/lsp"
+	"frugal-ls/internal/parser"
+	"frugal-ls/pkg/ast"
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 			printUsage()
 			return
 		case "--version", "-v":
-			fmt.Printf("frugal-lsp version %s\n", "0.1.0")
+			fmt.Printf("frugal-ls version %s\n", "0.1.0")
 			return
 		}
 	}
@@ -40,10 +40,10 @@ func printUsage() {
 	fmt.Println("Frugal Language Server Protocol (LSP) implementation")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Println("  frugal-lsp                 Run as LSP server (default)")
-	fmt.Println("  frugal-lsp --test [file]   Test parser with file or sample")
-	fmt.Println("  frugal-lsp --version       Show version information")
-	fmt.Println("  frugal-lsp --help          Show this help message")
+	fmt.Println("  frugal-ls                 Run as LSP server (default)")
+	fmt.Println("  frugal-ls --test [file]   Test parser with file or sample")
+	fmt.Println("  frugal-ls --version       Show version information")
+	fmt.Println("  frugal-ls --help          Show this help message")
 	fmt.Println()
 	fmt.Println("LSP Mode:")
 	fmt.Println("  The server communicates via stdin/stdout using the Language")

@@ -9,13 +9,13 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"github.com/tliron/glsp/server"
 
-	"frugal-lsp/internal/document"
-	"frugal-lsp/internal/features"
-	"frugal-lsp/internal/workspace"
+	"frugal-ls/internal/document"
+	"frugal-ls/internal/features"
+	"frugal-ls/internal/workspace"
 )
 
 const (
-	LanguageServerName = "frugal-lsp"
+	LanguageServerName = "frugal-ls"
 	LanguageServerVersion = "0.1.0"
 )
 
@@ -47,7 +47,7 @@ func NewServer() (*Server, error) {
 	}
 
 	// Create logger
-	logger := log.New(os.Stderr, "[frugal-lsp] ", log.LstdFlags)
+	logger := log.New(os.Stderr, "[frugal-ls] ", log.LstdFlags)
 
 	// Initialize workspace roots (will be updated from InitializeParams)
 	workspaceRoots := []string{"."}

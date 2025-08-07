@@ -1,4 +1,4 @@
-module frugal-lsp
+module frugal-ls
 
 go 1.23.1
 

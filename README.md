@@ -37,13 +37,13 @@ Frugal is an extension to Apache Thrift that adds pub/sub "scope" constructs for
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/charliestrawn/frugal-lsp
-   cd frugal-lsp
+   git clone https://github.com/charliestrawn/frugal-ls
+   cd frugal-ls
    ```
 
 2. **Build the language server:**
    ```bash
-   go build -o frugal-lsp ./cmd/frugal-lsp
+   go build -o frugal-ls ./cmd/frugal-ls
    ```
 
 3. **Install the VS Code extension:**
@@ -59,33 +59,62 @@ Frugal is an extension to Apache Thrift that adds pub/sub "scope" constructs for
 
 Run the language server directly:
 ```bash
-./frugal-lsp
+./frugal-ls
 ```
 
 Test parsing on a Frugal file:
 ```bash
-./frugal-lsp -test sample.frugal
+./frugal-ls -test sample.frugal
 ```
 
 ### VS Code Integration
 
 1. Install the extension from the `vscode-extension` directory
-2. Configure the path to the `frugal-lsp` binary in VS Code settings
+2. Configure the path to the `frugal-ls` binary in VS Code settings
 3. Open any `.frugal` file to activate language support
+
+### Neovim Integration
+
+#### Quick Setup (Kickstart.nvim)
+If you're using kickstart.nvim, add this to your servers table in `init.lua`:
+
+```lua
+local servers = {
+  -- ... your existing servers
+  frugal_ls = {
+    filetypes = { 'frugal' },
+  },
+}
+```
+
+Then copy the filetype detection:
+```bash
+mkdir -p ~/.config/nvim/ftdetect/
+cp nvim-integration/ftdetect/frugal.lua ~/.config/nvim/ftdetect/
+```
+
+#### Full Installation
+Use the automated installer:
+```bash
+cd nvim-integration
+./install.sh
+```
+
+Or see `nvim-integration/README.md` for detailed manual setup instructions.
 
 ### Configuration
 
 VS Code settings:
-- `frugal-lsp.server.path`: Path to the frugal-lsp executable
-- `frugal-lsp.server.args`: Additional arguments for the server
-- `frugal-lsp.trace.server`: Enable communication tracing
+- `frugal-ls.server.path`: Path to the frugal-ls executable
+- `frugal-ls.server.args`: Additional arguments for the server
+- `frugal-ls.trace.server`: Enable communication tracing
 
 ## Architecture
 
 ### Project Structure
 ```
-frugal-lsp/
-├── cmd/frugal-lsp/          # Main executable
+frugal-ls/
+├── cmd/frugal-ls/          # Main executable
 ├── internal/
 │   ├── document/            # Document lifecycle management
 │   ├── features/            # Language feature providers
@@ -100,6 +129,11 @@ frugal-lsp/
 │   └── workspace/           # Cross-file dependency resolution
 ├── pkg/ast/                 # AST utilities and symbol extraction
 ├── vscode-extension/        # VS Code extension
+├── nvim-integration/        # Neovim integration files
+│   ├── ftdetect/           # Filetype detection
+│   ├── after/syntax/       # Syntax highlighting
+│   ├── lua/plugins/        # Plugin configurations
+│   └── install.sh          # Automated installer
 └── sample.frugal           # Example Frugal file
 ```
 

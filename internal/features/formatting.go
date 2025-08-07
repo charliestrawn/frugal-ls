@@ -5,7 +5,7 @@ import (
 
 	protocol "github.com/tliron/glsp/protocol_3_16"
 
-	"frugal-lsp/internal/document"
+	"frugal-ls/internal/document"
 )
 
 // FormattingProvider handles document formatting for Frugal files

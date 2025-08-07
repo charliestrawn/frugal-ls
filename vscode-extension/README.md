@@ -17,7 +17,7 @@ This VS Code extension provides comprehensive language support for Frugal IDL fi
 
 ## Requirements
 
-The extension requires the `frugal-lsp` language server binary to be installed and available in your PATH, or configured via the `frugal-lsp.server.path` setting.
+The extension requires the `frugal-ls` language server binary to be installed and available in your PATH, or configured via the `frugal-ls.server.path` setting.
 
 ## Installation
 
@@ -25,13 +25,13 @@ The extension requires the `frugal-lsp` language server binary to be installed a
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/charliestrawn/frugal-lsp
-   cd frugal-lsp
+   git clone https://github.com/charliestrawn/frugal-ls
+   cd frugal-ls
    ```
 
 2. Build the language server:
    ```bash
-   go build -o frugal-lsp ./cmd/frugal-lsp
+   go build -o frugal-ls ./cmd/frugal-ls
    ```
 
 3. Install the VS Code extension:
@@ -46,13 +46,13 @@ The extension requires the `frugal-lsp` language server binary to be installed a
 
 The extension can be configured via VS Code settings:
 
-- `frugal-lsp.server.path`: Path to the frugal-lsp executable (default: "frugal-lsp")
-- `frugal-lsp.server.args`: Arguments to pass to the language server (default: [])
-- `frugal-lsp.trace.server`: Enable server communication tracing (default: "off")
+- `frugal-ls.server.path`: Path to the frugal-ls executable (default: "frugal-ls")
+- `frugal-ls.server.args`: Arguments to pass to the language server (default: [])
+- `frugal-ls.trace.server`: Enable server communication tracing (default: "off")
 
 ## Commands
 
-- `Frugal LSP: Restart Server` - Restart the language server
+- `Frugal LS: Restart Server` - Restart the language server
 
 ## Development
 

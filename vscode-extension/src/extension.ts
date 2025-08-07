@@ -12,8 +12,8 @@ let client: LanguageClient;
 
 export function activate(context: vscode.ExtensionContext) {
 	// Get configuration
-	const config = vscode.workspace.getConfiguration('frugal-lsp');
-	const serverPath = config.get<string>('server.path', 'frugal-lsp');
+	const config = vscode.workspace.getConfiguration('frugal-ls');
+	const serverPath = config.get<string>('server.path', 'frugal-ls');
 	const serverArgs = config.get<string[]>('server.args', []);
 	
 	// Server options for the language server
@@ -47,7 +47,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Create the language client and start the client.
 	client = new LanguageClient(
-		'frugal-lsp',
+		'frugal-ls',
 		'Frugal Language Server',
 		serverOptions,
 		clientOptions
@@ -58,7 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(disposable);
 
 	// Register additional commands if needed
-	const restartCommand = vscode.commands.registerCommand('frugal-lsp.restart', async () => {
+	const restartCommand = vscode.commands.registerCommand('frugal-ls.restart', async () => {
 		if (client) {
 			await client.stop();
 			await client.start();
@@ -75,13 +75,13 @@ export function activate(context: vscode.ExtensionContext) {
 	// Handle configuration changes
 	context.subscriptions.push(
 		vscode.workspace.onDidChangeConfiguration(event => {
-			if (event.affectsConfiguration('frugal-lsp')) {
+			if (event.affectsConfiguration('frugal-ls')) {
 				vscode.window.showWarningMessage(
 					'Frugal LSP configuration changed. Restart the server for changes to take effect.',
 					'Restart Server'
 				).then(selection => {
 					if (selection === 'Restart Server') {
-						vscode.commands.executeCommand('frugal-lsp.restart');
+						vscode.commands.executeCommand('frugal-ls.restart');
 					}
 				});
 			}

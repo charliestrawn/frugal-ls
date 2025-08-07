@@ -8,8 +8,8 @@ import (
 
 	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 
-	"frugal-lsp/internal/document"
-	"frugal-lsp/pkg/ast"
+	"frugal-ls/internal/document"
+	"frugal-ls/pkg/ast"
 )
 
 // IncludeResolver handles cross-file includes resolution and dependency tracking
