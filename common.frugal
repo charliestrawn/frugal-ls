@@ -1,0 +1,31 @@
+namespace go common
+
+// Common types used across multiple services
+struct Address {
+    1: required string street,
+    2: required string city,
+    3: required string state,
+    4: required string zipCode,
+    5: optional string country = "US"
+}
+
+struct ContactInfo {
+    1: optional string email,
+    2: optional string phone,
+    3: optional Address address
+}
+
+enum Priority {
+    LOW = 1,
+    MEDIUM = 2,
+    HIGH = 3,
+    URGENT = 4
+}
+
+exception ServiceError {
+    1: required string message,
+    2: optional i32 errorCode
+}
+
+typedef string UUID
+typedef i64 Timestamp

@@ -338,26 +338,6 @@ func (c *CompletionProvider) getSymbolCompletions(doc *document.Document, positi
 	return completions
 }
 
-// FindNodeAtPosition finds the tree-sitter node at the given position
-func FindNodeAtPosition(root *tree_sitter.Node, source []byte, line, character uint) *tree_sitter.Node {
-	if root == nil {
-		return nil
-	}
-	
-	// Convert line/character to byte offset
-	lines := strings.Split(string(source), "\n")
-	if int(line) >= len(lines) {
-		return nil
-	}
-	
-	byteOffset := uint(0)
-	for i := 0; i < int(line); i++ {
-		byteOffset += uint(len(lines[i])) + 1 // +1 for newline
-	}
-	byteOffset += character
-	
-	return findNodeContainingByte(root, byteOffset)
-}
 
 // findNodeContainingByte finds the deepest node containing the given byte offset
 func findNodeContainingByte(node *tree_sitter.Node, byteOffset uint) *tree_sitter.Node {

@@ -11,6 +11,7 @@ import (
 
 	"frugal-lsp/internal/document"
 	"frugal-lsp/internal/features"
+	"frugal-lsp/internal/workspace"
 )
 
 const (
@@ -24,11 +25,17 @@ type Server struct {
 	docManager     *document.Manager
 	logger         *log.Logger
 	
+	// Workspace management
+	includeResolver *workspace.IncludeResolver
+	workspaceRoots  []string
+	
 	// Language feature providers
 	completionProvider      *features.CompletionProvider
 	hoverProvider          *features.HoverProvider
 	documentSymbolProvider *features.DocumentSymbolProvider
 	definitionProvider     *features.DefinitionProvider
+	codeActionProvider     *features.CodeActionProvider
+	formattingProvider     *features.FormattingProvider
 }
 
 // NewServer creates a new Frugal LSP server
@@ -42,14 +49,22 @@ func NewServer() (*Server, error) {
 	// Create logger
 	logger := log.New(os.Stderr, "[frugal-lsp] ", log.LstdFlags)
 
+	// Initialize workspace roots (will be updated from InitializeParams)
+	workspaceRoots := []string{"."}
+	includeResolver := workspace.NewIncludeResolver(workspaceRoots)
+
 	// Create the server with language feature providers
 	lspServer := &Server{
 		docManager:             docManager,
 		logger:                 logger,
+		includeResolver:        includeResolver,
+		workspaceRoots:         workspaceRoots,
 		completionProvider:     features.NewCompletionProvider(),
 		hoverProvider:         features.NewHoverProvider(),
 		documentSymbolProvider: features.NewDocumentSymbolProvider(),
 		definitionProvider:    features.NewDefinitionProvider(),
+		codeActionProvider:    features.NewCodeActionProvider(),
+		formattingProvider:    features.NewFormattingProvider(),
 	}
 
 	// Set up GLSP server
@@ -65,6 +80,9 @@ func NewServer() (*Server, error) {
 		TextDocumentHover:         lspServer.textDocumentHover,
 		TextDocumentDocumentSymbol: lspServer.textDocumentDocumentSymbol,
 		TextDocumentDefinition:    lspServer.textDocumentDefinition,
+		TextDocumentCodeAction:    lspServer.textDocumentCodeAction,
+		TextDocumentFormatting:    lspServer.textDocumentFormatting,
+		TextDocumentRangeFormatting: lspServer.textDocumentRangeFormatting,
 		WorkspaceSymbol:          lspServer.workspaceSymbol,
 	}
 
@@ -91,6 +109,18 @@ func (s *Server) Run() error {
 // initialize handles the initialize request
 func (s *Server) initialize(context *glsp.Context, params *protocol.InitializeParams) (any, error) {
 	s.logger.Printf("Initialize request from client: %s", params.ClientInfo.Name)
+	
+	// Update workspace roots from initialize params
+	if params.WorkspaceFolders != nil && len(params.WorkspaceFolders) > 0 {
+		s.workspaceRoots = nil
+		for _, folder := range params.WorkspaceFolders {
+			s.workspaceRoots = append(s.workspaceRoots, folder.URI)
+		}
+		s.includeResolver = workspace.NewIncludeResolver(s.workspaceRoots)
+	} else if params.RootURI != nil {
+		s.workspaceRoots = []string{*params.RootURI}
+		s.includeResolver = workspace.NewIncludeResolver(s.workspaceRoots)
+	}
 	
 	capabilities := s.getServerCapabilities()
 	
@@ -130,6 +160,11 @@ func (s *Server) textDocumentDidOpen(context *glsp.Context, params *protocol.Did
 
 	// Send diagnostics if this is a Frugal file
 	if doc.IsValidFrugalFile() {
+		// Update include dependencies
+		if err := s.includeResolver.UpdateDocument(doc); err != nil {
+			s.logger.Printf("Error updating document dependencies: %v", err)
+		}
+		
 		s.publishDiagnostics(context, doc)
 	}
 
@@ -148,6 +183,11 @@ func (s *Server) textDocumentDidChange(context *glsp.Context, params *protocol.D
 
 	// Send updated diagnostics if this is a Frugal file
 	if doc.IsValidFrugalFile() {
+		// Update include dependencies
+		if err := s.includeResolver.UpdateDocument(doc); err != nil {
+			s.logger.Printf("Error updating document dependencies: %v", err)
+		}
+		
 		s.publishDiagnostics(context, doc)
 	}
 
@@ -157,6 +197,9 @@ func (s *Server) textDocumentDidChange(context *glsp.Context, params *protocol.D
 // textDocumentDidClose handles textDocument/didClose notifications
 func (s *Server) textDocumentDidClose(context *glsp.Context, params *protocol.DidCloseTextDocumentParams) error {
 	s.logger.Printf("Document closed: %s", params.TextDocument.URI)
+	
+	// Remove from include resolver
+	s.includeResolver.RemoveDocument(params.TextDocument.URI)
 	
 	err := s.docManager.DidClose(params)
 	if err != nil {
@@ -214,6 +257,16 @@ func (s *Server) getServerCapabilities() protocol.ServerCapabilities {
 		DocumentSymbolProvider: &[]bool{true}[0],
 		DefinitionProvider:     &[]bool{true}[0],
 		WorkspaceSymbolProvider: &[]bool{true}[0],
+		CodeActionProvider: &protocol.CodeActionOptions{
+			CodeActionKinds: []protocol.CodeActionKind{
+				protocol.CodeActionKindQuickFix,
+				protocol.CodeActionKindRefactor,
+				protocol.CodeActionKindSource,
+				protocol.CodeActionKindSourceOrganizeImports,
+			},
+		},
+		DocumentFormattingProvider:      &[]bool{true}[0],
+		DocumentRangeFormattingProvider: &[]bool{true}[0],
 	}
 }
 
@@ -303,6 +356,57 @@ func (s *Server) workspaceSymbol(context *glsp.Context, params *protocol.Workspa
 	
 	s.logger.Printf("Providing %d workspace symbols for query '%s'", len(symbols), params.Query)
 	return symbols, nil
+}
+
+// textDocumentCodeAction handles code action requests
+func (s *Server) textDocumentCodeAction(context *glsp.Context, params *protocol.CodeActionParams) (any, error) {
+	doc, exists := s.docManager.GetDocument(params.TextDocument.URI)
+	if !exists || !doc.IsValidFrugalFile() {
+		return nil, nil
+	}
+	
+	actions, err := s.codeActionProvider.ProvideCodeActions(doc, params.Range, params.Context)
+	if err != nil {
+		s.logger.Printf("Error providing code actions: %v", err)
+		return nil, err
+	}
+	
+	s.logger.Printf("Providing %d code actions for %s", len(actions), params.TextDocument.URI)
+	return actions, nil
+}
+
+// textDocumentFormatting handles document formatting requests
+func (s *Server) textDocumentFormatting(context *glsp.Context, params *protocol.DocumentFormattingParams) ([]protocol.TextEdit, error) {
+	doc, exists := s.docManager.GetDocument(params.TextDocument.URI)
+	if !exists || !doc.IsValidFrugalFile() {
+		return nil, nil
+	}
+	
+	edits, err := s.formattingProvider.ProvideDocumentFormatting(doc, params.Options)
+	if err != nil {
+		s.logger.Printf("Error providing document formatting: %v", err)
+		return nil, err
+	}
+	
+	s.logger.Printf("Providing %d formatting edits for %s", len(edits), params.TextDocument.URI)
+	return edits, nil
+}
+
+// textDocumentRangeFormatting handles range formatting requests
+func (s *Server) textDocumentRangeFormatting(context *glsp.Context, params *protocol.DocumentRangeFormattingParams) ([]protocol.TextEdit, error) {
+	doc, exists := s.docManager.GetDocument(params.TextDocument.URI)
+	if !exists || !doc.IsValidFrugalFile() {
+		return nil, nil
+	}
+	
+	edits, err := s.formattingProvider.ProvideDocumentRangeFormatting(doc, params.Range, params.Options)
+	if err != nil {
+		s.logger.Printf("Error providing range formatting: %v", err)
+		return nil, err
+	}
+	
+	s.logger.Printf("Providing %d range formatting edits for %s", len(edits), params.TextDocument.URI)
+	return edits, nil
 }
 
 // getAllDocuments returns all currently managed documents

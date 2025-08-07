@@ -1,0 +1,34 @@
+include "common.frugal"
+
+namespace go example
+
+service UserService {
+    User getUser(1: i64 userId) throws (1: UserNotFound error),
+    void updateUser(1: User user)
+}
+
+scope UserEvents prefix "user" {
+    UserCreated: User,
+    UserUpdated: User
+}
+
+struct User {
+    1: required i64 id,
+    2: optional string name,
+    3: optional string email
+}
+
+exception UserNotFound {
+    1: string message
+}
+
+const i32 DEFAULT_TIMEOUT = 5000;
+
+enum Status {
+    ACTIVE = 1,
+    INACTIVE = 2,
+    PENDING = 3
+}
+
+typedef string UserId
+typedef map<string, string> Metadata

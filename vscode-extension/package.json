@@ -1,0 +1,98 @@
+{
+  "name": "frugal-lsp",
+  "displayName": "Frugal IDL Language Support",
+  "description": "Language support for Frugal IDL files with syntax highlighting, completion, hover information, and more",
+  "version": "0.1.0",
+  "publisher": "frugal-lsp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/charliestrawn/frugal-lsp"
+  },
+  "engines": {
+    "vscode": "^1.63.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Language Packs",
+    "Other"
+  ],
+  "keywords": [
+    "frugal",
+    "idl",
+    "thrift",
+    "language-server",
+    "lsp"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "frugal",
+        "aliases": [
+          "Frugal IDL",
+          "frugal"
+        ],
+        "extensions": [
+          ".frugal"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "frugal",
+        "scopeName": "source.frugal",
+        "path": "./syntaxes/frugal.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Frugal LSP Configuration",
+      "properties": {
+        "frugal-lsp.server.path": {
+          "type": "string",
+          "default": "frugal-lsp",
+          "description": "Path to the frugal-lsp executable"
+        },
+        "frugal-lsp.server.args": {
+          "type": "array",
+          "default": [],
+          "description": "Arguments to pass to the frugal-lsp server"
+        },
+        "frugal-lsp.trace.server": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the language server."
+        }
+      }
+    }
+  },
+  "activationEvents": [
+    "onLanguage:frugal"
+  ],
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.63.0",
+    "@types/node": "16.x",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "eslint": "^8.28.0",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.0.2"
+  }
+}
