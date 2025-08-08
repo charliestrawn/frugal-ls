@@ -54,8 +54,8 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 
 	// Start the client. This will also launch the server
-	const disposable = client.start();
-	context.subscriptions.push(disposable);
+	const startPromise = client.start();
+	context.subscriptions.push(client);
 
 	// Register additional commands if needed
 	const restartCommand = vscode.commands.registerCommand('frugal-ls.restart', async () => {
@@ -68,7 +68,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(restartCommand);
 
 	// Show status in the status bar
-	client.onReady().then(() => {
+	startPromise.then(() => {
 		vscode.window.showInformationMessage('Frugal Language Server is ready');
 	});
 
