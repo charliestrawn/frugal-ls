@@ -135,6 +135,14 @@ func (c *CodeActionProvider) getRefactorActions(doc *document.Document, rng prot
 		}
 	}
 	
+	// Extract parameter list to struct
+	if c.isMethodWithMultipleParameters(node) {
+		action := c.createExtractParametersToStructAction(doc, rng, node)
+		if action != nil {
+			actions = append(actions, *action)
+		}
+	}
+	
 	// Generate constructor for struct
 	if node.Kind() == "struct_definition" {
 		action := c.createGenerateConstructorAction(doc, node)
@@ -562,4 +570,368 @@ func (c *CodeActionProvider) walkNode(node *tree_sitter.Node, visitor func(*tree
 		child := node.Child(i)
 		c.walkNode(child, visitor)
 	}
+}
+
+// isMethodWithMultipleParameters checks if a node is a method definition with multiple parameters
+func (c *CodeActionProvider) isMethodWithMultipleParameters(node *tree_sitter.Node) bool {
+	// Find the function definition node
+	functionNode := c.findParentOfType(node, "function_definition")
+	if functionNode == nil && node.Kind() == "function_definition" {
+		functionNode = node
+	}
+	if functionNode == nil {
+		return false
+	}
+	
+	// Count parameters (they are represented as "field" nodes in the first field_list)
+	parameterCount := 0
+	childCount := functionNode.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := functionNode.Child(i)
+		if child.Kind() == "field_list" {
+			// This should be the parameter list (comes before throws)
+			fieldCount := child.ChildCount()
+			for j := uint(0); j < fieldCount; j++ {
+				field := child.Child(j)
+				if field.Kind() == "field" {
+					parameterCount++
+				}
+			}
+			break // Stop after first field_list
+		}
+	}
+	
+	return parameterCount >= 2 // Only suggest extraction for 2+ parameters
+}
+
+// createExtractParametersToStructAction creates a refactoring to extract parameters into a struct
+func (c *CodeActionProvider) createExtractParametersToStructAction(doc *document.Document, rng protocol.Range, node *tree_sitter.Node) *protocol.CodeAction {
+	// Find the function definition node
+	functionNode := c.findParentOfType(node, "function_definition")
+	if functionNode == nil && node.Kind() == "function_definition" {
+		functionNode = node
+	}
+	if functionNode == nil {
+		return nil
+	}
+	
+	// Extract method name
+	methodName := c.extractMethodName(functionNode, doc.Content)
+	if methodName == "" {
+		return nil
+	}
+	
+	// Extract parameters
+	parameters := c.extractParameters(functionNode, doc.Content)
+	if len(parameters) < 2 {
+		return nil
+	}
+	
+	// Generate struct name (e.g., "GetUserRequest")
+	structName := c.generateStructName(methodName)
+	
+	// Create struct definition
+	structDef := c.generateParameterStruct(structName, parameters)
+	
+	// Create updated method signature
+	updatedMethod := c.generateUpdatedMethodSignature(functionNode, doc.Content, structName)
+	
+	// Create edits
+	var edits []protocol.TextEdit
+	
+	// Add struct definition before the service
+	serviceNode := c.findParentOfType(functionNode, "service_definition")
+	if serviceNode != nil {
+		structInsertPos := protocol.Position{
+			Line:      uint32(serviceNode.StartPosition().Row),
+			Character: 0,
+		}
+		edits = append(edits, protocol.TextEdit{
+			Range: protocol.Range{
+				Start: structInsertPos,
+				End:   structInsertPos,
+			},
+			NewText: structDef + "\n\n",
+		})
+	}
+	
+	// Replace method signature
+	methodRange := protocol.Range{
+		Start: protocol.Position{
+			Line:      uint32(functionNode.StartPosition().Row),
+			Character: uint32(functionNode.StartPosition().Column),
+		},
+		End: protocol.Position{
+			Line:      uint32(functionNode.EndPosition().Row),
+			Character: uint32(functionNode.EndPosition().Column),
+		},
+	}
+	
+	edits = append(edits, protocol.TextEdit{
+		Range:   methodRange,
+		NewText: updatedMethod,
+	})
+	
+	changes := map[string][]protocol.TextEdit{
+		doc.URI: edits,
+	}
+	
+	kind := protocol.CodeActionKindRefactor
+	return &protocol.CodeAction{
+		Title: fmt.Sprintf("Extract parameters to %s struct", structName),
+		Kind:  &kind,
+		Edit: &protocol.WorkspaceEdit{
+			Changes: changes,
+		},
+	}
+}
+
+// Parameter represents a method parameter
+type Parameter struct {
+	ID   string
+	Type string
+	Name string
+}
+
+// extractMethodName extracts the method name from a function definition
+func (c *CodeActionProvider) extractMethodName(functionNode *tree_sitter.Node, source []byte) string {
+	var methodName string
+	c.walkNode(functionNode, func(n *tree_sitter.Node) bool {
+		if n.Kind() == "identifier" && n.Parent().Kind() == "function_definition" {
+			methodName = ast.GetText(n, source)
+			return false // Stop walking once we find it
+		}
+		return true
+	})
+	return methodName
+}
+
+// extractParameters extracts parameters from a function definition
+func (c *CodeActionProvider) extractParameters(functionNode *tree_sitter.Node, source []byte) []Parameter {
+	var parameters []Parameter
+	
+	// Find the first field_list (parameter list), not the throws field_list
+	childCount := functionNode.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := functionNode.Child(i)
+		if child.Kind() == "field_list" {
+			// This should be the parameter list (comes before throws)
+			fieldCount := child.ChildCount()
+			for j := uint(0); j < fieldCount; j++ {
+				field := child.Child(j)
+				if field.Kind() == "field" {
+					param := c.parseParameter(field, source)
+					if param.Name != "" {
+						parameters = append(parameters, param)
+					}
+				}
+			}
+			break // Stop after first field_list
+		}
+	}
+	
+	return parameters
+}
+
+// parseParameter parses a single parameter node (field node in function signature)
+func (c *CodeActionProvider) parseParameter(fieldNode *tree_sitter.Node, source []byte) Parameter {
+	param := Parameter{}
+	
+	// Walk through field children to extract ID, type, and name
+	childCount := fieldNode.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := fieldNode.Child(i)
+		
+		switch child.Kind() {
+		case "field_id":
+			// Extract the number from field_id (e.g., "1:" -> "1")
+			idText := ast.GetText(child, source)
+			param.ID = strings.TrimSuffix(idText, ":")
+		case "field_type":
+			// Extract type from field_type node
+			param.Type = c.extractTypeFromFieldType(child, source)
+		case "identifier":
+			// This should be the parameter name
+			param.Name = ast.GetText(child, source)
+		}
+	}
+	
+	return param
+}
+
+// extractTypeFromFieldType extracts the type string from a field_type node
+func (c *CodeActionProvider) extractTypeFromFieldType(fieldTypeNode *tree_sitter.Node, source []byte) string {
+	// Look for base_type within field_type
+	childCount := fieldTypeNode.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := fieldTypeNode.Child(i)
+		if child.Kind() == "base_type" {
+			return c.extractTypeFromBaseType(child, source)
+		}
+	}
+	return ast.GetText(fieldTypeNode, source)
+}
+
+// extractTypeFromBaseType extracts the actual type from a base_type node
+func (c *CodeActionProvider) extractTypeFromBaseType(baseTypeNode *tree_sitter.Node, source []byte) string {
+	// The base_type contains the actual type keyword (string, i64, bool, etc.)
+	childCount := baseTypeNode.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := baseTypeNode.Child(i)
+		childKind := child.Kind()
+		// Look for primitive type nodes
+		if childKind == "string" || childKind == "i64" || childKind == "bool" || 
+		   childKind == "i32" || childKind == "double" || childKind == "byte" {
+			return ast.GetText(child, source)
+		}
+	}
+	return ast.GetText(baseTypeNode, source)
+}
+
+// generateStructName generates a struct name from method name (e.g., "getUser" -> "GetUserRequest")
+func (c *CodeActionProvider) generateStructName(methodName string) string {
+	// Capitalize first letter
+	if len(methodName) == 0 {
+		return "Request"
+	}
+	
+	capitalized := strings.ToUpper(methodName[:1]) + methodName[1:]
+	return capitalized + "Request"
+}
+
+// generateParameterStruct generates the struct definition from parameters
+func (c *CodeActionProvider) generateParameterStruct(structName string, parameters []Parameter) string {
+	var builder strings.Builder
+	
+	builder.WriteString(fmt.Sprintf("struct %s {\n", structName))
+	
+	for _, param := range parameters {
+		builder.WriteString(fmt.Sprintf("    %s: %s %s,\n", param.ID, param.Type, param.Name))
+	}
+	
+	builder.WriteString("}")
+	
+	return builder.String()
+}
+
+// generateUpdatedMethodSignature generates the updated method signature using the struct
+func (c *CodeActionProvider) generateUpdatedMethodSignature(functionNode *tree_sitter.Node, source []byte, structName string) string {
+	// Extract return type and method name
+	methodName := c.extractMethodName(functionNode, source)
+	returnType := c.extractReturnType(functionNode, source)
+	throwsClause := c.extractThrowsClause(functionNode, source)
+	
+	// Generate new signature
+	signature := fmt.Sprintf("    %s %s(1: %s request)", returnType, methodName, structName)
+	
+	if throwsClause != "" {
+		signature += " " + throwsClause
+	}
+	
+	return signature
+}
+
+// isInThrowsClause checks if a field node is part of a throws clause
+func (c *CodeActionProvider) isInThrowsClause(fieldNode *tree_sitter.Node) bool {
+	// Walk up the parent chain to see if we're in a throws context
+	current := fieldNode.Parent() // field_list
+	if current != nil {
+		current = current.Parent() // should be throws_clause or function parameter list
+		if current != nil && (current.Kind() == "throws_clause" || current.Kind() == "exception_spec") {
+			return true
+		}
+	}
+	return false
+}
+
+// extractReturnType extracts the return type from a function definition
+func (c *CodeActionProvider) extractReturnType(functionNode *tree_sitter.Node, source []byte) string {
+	// Look for function_type node which contains the return type
+	childCount := functionNode.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := functionNode.Child(i)
+		if child.Kind() == "function_type" {
+			return c.extractTypeFromFieldType(child, source)
+		}
+	}
+	
+	return "void" // default
+}
+
+// extractThrowsClause extracts the throws clause if present
+func (c *CodeActionProvider) extractThrowsClause(functionNode *tree_sitter.Node, source []byte) string {
+	var throwsClause strings.Builder
+	foundThrows := false
+	
+	childCount := functionNode.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := functionNode.Child(i)
+		
+		if child.Kind() == "throws" {
+			foundThrows = true
+			throwsClause.WriteString("throws (")
+			
+			// Look for the next field_list (throws specifications)
+			for j := i + 1; j < childCount; j++ {
+				nextChild := functionNode.Child(j)
+				if nextChild.Kind() == "field_list" {
+					// Extract throw specifications
+					throwSpecs := c.extractThrowSpecs(nextChild, source)
+					throwsClause.WriteString(throwSpecs)
+					break
+				}
+			}
+			throwsClause.WriteString(")")
+			break
+		}
+	}
+	
+	if !foundThrows {
+		return ""
+	}
+	
+	return throwsClause.String()
+}
+
+// extractThrowSpecs extracts throw specifications from a field_list
+func (c *CodeActionProvider) extractThrowSpecs(fieldListNode *tree_sitter.Node, source []byte) string {
+	var specs []string
+	
+	fieldCount := fieldListNode.ChildCount()
+	for i := uint(0); i < fieldCount; i++ {
+		field := fieldListNode.Child(i)
+		if field.Kind() == "field" {
+			spec := c.extractThrowSpec(field, source)
+			if spec != "" {
+				specs = append(specs, spec)
+			}
+		}
+	}
+	
+	return strings.Join(specs, ", ")
+}
+
+// extractThrowSpec extracts a single throw specification
+func (c *CodeActionProvider) extractThrowSpec(fieldNode *tree_sitter.Node, source []byte) string {
+	var id, exceptionType, name string
+	
+	childCount := fieldNode.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := fieldNode.Child(i)
+		
+		switch child.Kind() {
+		case "field_id":
+			id = ast.GetText(child, source)
+		case "field_type":
+			exceptionType = c.extractTypeFromFieldType(child, source)
+		case "identifier":
+			name = ast.GetText(child, source)
+		}
+	}
+	
+	if id != "" && exceptionType != "" && name != "" {
+		return fmt.Sprintf("%s %s %s", id, exceptionType, name)
+	}
+	
+	return ""
 }

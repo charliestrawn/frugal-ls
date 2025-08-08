@@ -1,0 +1,21 @@
+service OrderService {
+    Order createOrder(1: i64 userId, 2: string productName, 3: i32 quantity, 4: double price) throws (1: InvalidOrder error),
+    void updateOrder(1: Order order),
+    Order getOrder(1: i64 orderId) throws (1: OrderNotFound error)
+}
+
+struct Order {
+    1: i64 id,
+    2: string productName,
+    3: i32 quantity,
+    4: double price,
+    5: i64 userId
+}
+
+exception InvalidOrder {
+    1: string message
+}
+
+exception OrderNotFound {
+    1: string message
+}
