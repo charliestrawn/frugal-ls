@@ -34,6 +34,8 @@ type Server struct {
 	hoverProvider          *features.HoverProvider
 	documentSymbolProvider *features.DocumentSymbolProvider
 	definitionProvider     *features.DefinitionProvider
+	referencesProvider     *features.ReferencesProvider
+	documentHighlightProvider *features.DocumentHighlightProvider
 	codeActionProvider     *features.CodeActionProvider
 	formattingProvider     *features.FormattingProvider
 }
@@ -63,6 +65,8 @@ func NewServer() (*Server, error) {
 		hoverProvider:         features.NewHoverProvider(),
 		documentSymbolProvider: features.NewDocumentSymbolProvider(),
 		definitionProvider:    features.NewDefinitionProvider(),
+		referencesProvider:    features.NewReferencesProvider(),
+		documentHighlightProvider: features.NewDocumentHighlightProvider(),
 		codeActionProvider:    features.NewCodeActionProvider(),
 		formattingProvider:    features.NewFormattingProvider(),
 	}
@@ -80,6 +84,8 @@ func NewServer() (*Server, error) {
 		TextDocumentHover:         lspServer.textDocumentHover,
 		TextDocumentDocumentSymbol: lspServer.textDocumentDocumentSymbol,
 		TextDocumentDefinition:    lspServer.textDocumentDefinition,
+		TextDocumentReferences:    lspServer.textDocumentReferences,
+		TextDocumentDocumentHighlight: lspServer.textDocumentDocumentHighlight,
 		TextDocumentCodeAction:    lspServer.textDocumentCodeAction,
 		TextDocumentFormatting:    lspServer.textDocumentFormatting,
 		TextDocumentRangeFormatting: lspServer.textDocumentRangeFormatting,
@@ -256,6 +262,8 @@ func (s *Server) getServerCapabilities() protocol.ServerCapabilities {
 		},
 		DocumentSymbolProvider: &[]bool{true}[0],
 		DefinitionProvider:     &[]bool{true}[0],
+		ReferencesProvider:     &[]bool{true}[0],
+		DocumentHighlightProvider: &[]bool{true}[0],
 		WorkspaceSymbolProvider: &[]bool{true}[0],
 		CodeActionProvider: &protocol.CodeActionOptions{
 			CodeActionKinds: []protocol.CodeActionKind{
@@ -341,6 +349,43 @@ func (s *Server) textDocumentDefinition(context *glsp.Context, params *protocol.
 	
 	s.logger.Printf("Providing %d definition locations for %s", len(locations), params.TextDocument.URI)
 	return locations, nil
+}
+
+// textDocumentReferences handles find references requests
+func (s *Server) textDocumentReferences(context *glsp.Context, params *protocol.ReferenceParams) ([]protocol.Location, error) {
+	doc, exists := s.docManager.GetDocument(params.TextDocument.URI)
+	if !exists || !doc.IsValidFrugalFile() {
+		return nil, nil
+	}
+	
+	// Get all documents for cross-file reference search
+	allDocuments := s.getAllDocuments()
+	
+	locations, err := s.referencesProvider.ProvideReferences(doc, params.Position, params.Context.IncludeDeclaration, allDocuments)
+	if err != nil {
+		s.logger.Printf("Error providing references: %v", err)
+		return nil, err
+	}
+	
+	s.logger.Printf("Providing %d reference locations for %s", len(locations), params.TextDocument.URI)
+	return locations, nil
+}
+
+// textDocumentDocumentHighlight handles document highlight requests
+func (s *Server) textDocumentDocumentHighlight(context *glsp.Context, params *protocol.DocumentHighlightParams) ([]protocol.DocumentHighlight, error) {
+	doc, exists := s.docManager.GetDocument(params.TextDocument.URI)
+	if !exists || !doc.IsValidFrugalFile() {
+		return nil, nil
+	}
+	
+	highlights, err := s.documentHighlightProvider.ProvideDocumentHighlight(doc, params.Position)
+	if err != nil {
+		s.logger.Printf("Error providing document highlights: %v", err)
+		return nil, err
+	}
+	
+	s.logger.Printf("Providing %d document highlights for %s", len(highlights), params.TextDocument.URI)
+	return highlights, nil
 }
 
 // workspaceSymbol handles workspace symbol search requests

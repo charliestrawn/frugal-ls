@@ -20,16 +20,22 @@ func NewCompletionProvider() *CompletionProvider {
 
 // ProvideCompletion provides completion items for a given position
 func (c *CompletionProvider) ProvideCompletion(doc *document.Document, position protocol.Position) ([]protocol.CompletionItem, error) {
-	var completions []protocol.CompletionItem
+	completions := make([]protocol.CompletionItem, 0)
 	
 	// Get the current line content
 	lines := strings.Split(string(doc.Content), "\n")
 	if int(position.Line) >= len(lines) {
-		return completions, nil
+		return completions, nil // Return empty slice, not nil
 	}
 	
 	currentLine := lines[position.Line]
-	linePrefix := currentLine[:position.Character]
+	
+	// Handle character position beyond line length
+	prefixEnd := int(position.Character)
+	if prefixEnd > len(currentLine) {
+		prefixEnd = len(currentLine)
+	}
+	linePrefix := currentLine[:prefixEnd]
 	
 	// Determine the context and provide appropriate completions
 	context := c.determineCompletionContext(linePrefix)

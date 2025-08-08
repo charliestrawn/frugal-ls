@@ -57,6 +57,8 @@ pids
 # Coverage directory used by tools like istanbul
 coverage/
 *.lcov
+coverage.out
+coverage.html
 
 # nyc test coverage
 .nyc_output
@@ -69,6 +71,9 @@ coverage/
 *.temp
 .tmp/
 .temp/
+
+# Debug files
+debug_*.go
 
 # Local env files
 .env
