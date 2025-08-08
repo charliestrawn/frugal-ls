@@ -1,0 +1,77 @@
+include "common.frugal"
+
+namespace go demo
+
+service UserService {
+    User getUser(1: i64 userId) throws (1: UserNotFound error),
+    User createUser(1: string name, 2: string email, 3: UserProfile profile),
+    void updateUser(1: User user),
+    void deleteUser(1: i64 userId)
+}
+
+service OrderService {
+    Order getOrder(1: i64 orderId),
+    Order createOrder(1: User user, 2: Product product, 3: i32 quantity),
+    void updateOrder(1: Order order)
+}
+
+struct User {
+    1: required i64 id,
+    2: required string name,
+    3: optional string email,
+    4: optional UserProfile profile
+}
+
+struct UserProfile {
+    1: optional string bio,
+    2: optional string avatar,
+    3: optional UserSettings settings
+}
+
+struct UserSettings {
+    1: bool notifications,
+    2: string theme,
+    3: string language
+}
+
+struct Order {
+    1: required i64 id,
+    2: required User user,
+    3: required Product product,
+    4: required i32 quantity,
+    5: required OrderStatus status
+}
+
+struct Product {
+    1: required i64 id,
+    2: required string name,
+    3: required double price
+}
+
+enum UserStatus {
+    ACTIVE = 1,
+    INACTIVE = 2,
+    SUSPENDED = 3
+}
+
+enum OrderStatus {
+    PENDING = 1,
+    CONFIRMED = 2,
+    SHIPPED = 3,
+    DELIVERED = 4,
+    CANCELLED = 5
+}
+
+exception UserNotFound {
+    1: string message
+}
+
+exception OrderNotFound {
+    1: string message
+}
+
+const string DEFAULT_THEME = "light"
+const i32 MAX_ORDERS_PER_USER = 100
+
+typedef string UserId
+typedef string OrderId

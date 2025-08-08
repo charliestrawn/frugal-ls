@@ -20,14 +20,18 @@ const (
 	NodeTypeException NodeType = "exception"
 	NodeTypeInclude   NodeType = "include"
 	NodeTypeNamespace NodeType = "namespace"
+	NodeTypeMethod    NodeType = "method"
+	NodeTypeField     NodeType = "field"
+	NodeTypeEvent     NodeType = "event"
+	NodeTypeEnumValue NodeType = "enum_value"
 )
 
 // Symbol represents a symbol in the Frugal AST
 type Symbol struct {
 	Name     string
 	Type     NodeType
-	Line     uint
-	Column   uint
+	Line     int
+	Column   int
 	StartPos uint
 	EndPos   uint
 	Node     *tree_sitter.Node
@@ -139,8 +143,8 @@ func extractServiceSymbol(node *tree_sitter.Node, source []byte) *Symbol {
 	return &Symbol{
 		Name:     name,
 		Type:     NodeTypeService,
-		Line:     point.Row,
-		Column:   point.Column,
+		Line:     int(point.Row),
+		Column:   int(point.Column),
 		StartPos: node.StartByte(),
 		EndPos:   node.EndByte(),
 		Node:     node,
@@ -159,8 +163,8 @@ func extractScopeSymbol(node *tree_sitter.Node, source []byte) *Symbol {
 	return &Symbol{
 		Name:     name,
 		Type:     NodeTypeScope,
-		Line:     point.Row,
-		Column:   point.Column,
+		Line:     int(point.Row),
+		Column:   int(point.Column),
 		StartPos: node.StartByte(),
 		EndPos:   node.EndByte(),
 		Node:     node,
@@ -179,8 +183,8 @@ func extractStructSymbol(node *tree_sitter.Node, source []byte) *Symbol {
 	return &Symbol{
 		Name:     name,
 		Type:     NodeTypeStruct,
-		Line:     point.Row,
-		Column:   point.Column,
+		Line:     int(point.Row),
+		Column:   int(point.Column),
 		StartPos: node.StartByte(),
 		EndPos:   node.EndByte(),
 		Node:     node,
@@ -199,8 +203,8 @@ func extractEnumSymbol(node *tree_sitter.Node, source []byte) *Symbol {
 	return &Symbol{
 		Name:     name,
 		Type:     NodeTypeEnum,
-		Line:     point.Row,
-		Column:   point.Column,
+		Line:     int(point.Row),
+		Column:   int(point.Column),
 		StartPos: node.StartByte(),
 		EndPos:   node.EndByte(),
 		Node:     node,
@@ -219,8 +223,8 @@ func extractConstSymbol(node *tree_sitter.Node, source []byte) *Symbol {
 	return &Symbol{
 		Name:     name,
 		Type:     NodeTypeConst,
-		Line:     point.Row,
-		Column:   point.Column,
+		Line:     int(point.Row),
+		Column:   int(point.Column),
 		StartPos: node.StartByte(),
 		EndPos:   node.EndByte(),
 		Node:     node,
@@ -239,8 +243,8 @@ func extractTypedefSymbol(node *tree_sitter.Node, source []byte) *Symbol {
 	return &Symbol{
 		Name:     name,
 		Type:     NodeTypeTypedef,
-		Line:     point.Row,
-		Column:   point.Column,
+		Line:     int(point.Row),
+		Column:   int(point.Column),
 		StartPos: node.StartByte(),
 		EndPos:   node.EndByte(),
 		Node:     node,
@@ -259,8 +263,8 @@ func extractExceptionSymbol(node *tree_sitter.Node, source []byte) *Symbol {
 	return &Symbol{
 		Name:     name,
 		Type:     NodeTypeException,
-		Line:     point.Row,
-		Column:   point.Column,
+		Line:     int(point.Row),
+		Column:   int(point.Column),
 		StartPos: node.StartByte(),
 		EndPos:   node.EndByte(),
 		Node:     node,

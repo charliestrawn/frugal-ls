@@ -27,6 +27,7 @@ type Server struct {
 	
 	// Workspace management
 	includeResolver *workspace.IncludeResolver
+	symbolIndex     *workspace.SymbolIndex
 	workspaceRoots  []string
 	
 	// Language feature providers
@@ -55,12 +56,14 @@ func NewServer() (*Server, error) {
 	// Initialize workspace roots (will be updated from InitializeParams)
 	workspaceRoots := []string{"."}
 	includeResolver := workspace.NewIncludeResolver(workspaceRoots)
+	symbolIndex := workspace.NewSymbolIndex()
 
 	// Create the server with language feature providers
 	lspServer := &Server{
 		docManager:             docManager,
 		logger:                 logger,
 		includeResolver:        includeResolver,
+		symbolIndex:            symbolIndex,
 		workspaceRoots:         workspaceRoots,
 		completionProvider:     features.NewCompletionProvider(),
 		hoverProvider:         features.NewHoverProvider(),
@@ -175,6 +178,9 @@ func (s *Server) textDocumentDidOpen(context *glsp.Context, params *protocol.Did
 			s.logger.Printf("Error updating document dependencies: %v", err)
 		}
 		
+		// Update symbol index
+		s.symbolIndex.UpdateDocument(doc)
+		
 		s.publishDiagnostics(context, doc)
 	}
 
@@ -198,6 +204,9 @@ func (s *Server) textDocumentDidChange(context *glsp.Context, params *protocol.D
 			s.logger.Printf("Error updating document dependencies: %v", err)
 		}
 		
+		// Update symbol index
+		s.symbolIndex.UpdateDocument(doc)
+		
 		s.publishDiagnostics(context, doc)
 	}
 
@@ -208,8 +217,9 @@ func (s *Server) textDocumentDidChange(context *glsp.Context, params *protocol.D
 func (s *Server) textDocumentDidClose(context *glsp.Context, params *protocol.DidCloseTextDocumentParams) error {
 	s.logger.Printf("Document closed: %s", params.TextDocument.URI)
 	
-	// Remove from include resolver
+	// Remove from include resolver and symbol index
 	s.includeResolver.RemoveDocument(params.TextDocument.URI)
+	s.symbolIndex.RemoveDocument(params.TextDocument.URI)
 	
 	err := s.docManager.DidClose(params)
 	if err != nil {
@@ -399,16 +409,11 @@ func (s *Server) textDocumentDocumentHighlight(context *glsp.Context, params *pr
 
 // workspaceSymbol handles workspace symbol search requests
 func (s *Server) workspaceSymbol(context *glsp.Context, params *protocol.WorkspaceSymbolParams) ([]protocol.SymbolInformation, error) {
-	// Get all documents
-	allDocuments := s.getAllDocuments()
+	// Use the indexed search for better performance
+	const maxResults = 100
+	symbols := s.symbolIndex.Search(params.Query, maxResults)
 	
-	symbols, err := s.documentSymbolProvider.ProvideWorkspaceSymbols(params.Query, allDocuments)
-	if err != nil {
-		s.logger.Printf("Error providing workspace symbols: %v", err)
-		return nil, err
-	}
-	
-	s.logger.Printf("Providing %d workspace symbols for query '%s'", len(symbols), params.Query)
+	s.logger.Printf("Providing %d indexed workspace symbols for query '%s'", len(symbols), params.Query)
 	return symbols, nil
 }
 

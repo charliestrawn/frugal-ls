@@ -347,7 +347,7 @@ func (c *CompletionProvider) getSymbolCompletions(doc *document.Document, positi
 	symbols := doc.GetSymbols()
 	for _, symbol := range symbols {
 		// Don't suggest the symbol at the current position
-		if symbol.Line == uint(position.Line) {
+		if symbol.Line == int(position.Line) {
 			continue
 		}
 		
