@@ -22,8 +22,13 @@ func (f *FormattingProvider) ProvideDocumentFormatting(doc *document.Document, o
 		return nil, nil
 	}
 
-	// Format the document based on Frugal style guidelines
-	formattedContent := f.formatDocument(doc.Content, doc.ParseResult.GetRootNode(), options)
+	// Use the AST-based formatter for better results
+	formatter := NewFrugalFormatter(options)
+	formattedContent, err := formatter.FormatDocument(doc)
+	if err != nil {
+		// Fallback to simple formatting on error
+		formattedContent = f.formatDocument(doc.Content, doc.ParseResult.GetRootNode(), options)
+	}
 	
 	// If content unchanged, return no edits
 	if formattedContent == string(doc.Content) {
@@ -53,9 +58,35 @@ func (f *FormattingProvider) ProvideDocumentRangeFormatting(doc *document.Docume
 		return nil, nil
 	}
 
-	// For simplicity, format the entire document and extract the range
-	// In a production implementation, this could be optimized to only format the selected range
-	return f.ProvideDocumentFormatting(doc, options)
+	// Use the AST-based formatter for range formatting
+	formatter := NewFrugalFormatter(options)
+	formattedContent, err := formatter.FormatRange(doc, rng)
+	if err != nil {
+		// Fallback to full document formatting
+		return f.ProvideDocumentFormatting(doc, options)
+	}
+	
+	// If content unchanged, return no edits
+	if formattedContent == string(doc.Content) {
+		return nil, nil
+	}
+
+	// Return a single edit that replaces the entire document
+	// TODO: Optimize to only replace the affected range
+	lines := strings.Split(string(doc.Content), "\n")
+	endLine := uint32(len(lines) - 1)
+	endChar := uint32(0)
+	if len(lines) > 0 {
+		endChar = uint32(len(lines[len(lines)-1]))
+	}
+
+	return []protocol.TextEdit{{
+		Range: protocol.Range{
+			Start: protocol.Position{Line: 0, Character: 0},
+			End:   protocol.Position{Line: endLine, Character: endChar},
+		},
+		NewText: formattedContent,
+	}}, nil
 }
 
 // formatDocument applies formatting rules to the document
