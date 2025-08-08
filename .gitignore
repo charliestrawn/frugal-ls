@@ -19,8 +19,8 @@ go.work.sum
 # vendor/
 
 # Build artifacts
-frugal-ls
-frugal-lsp
+/frugal-ls
+/frugal-lsp
 dist/
 build/
 
