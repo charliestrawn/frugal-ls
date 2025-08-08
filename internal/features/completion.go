@@ -37,18 +37,30 @@ func (c *CompletionProvider) ProvideCompletion(doc *document.Document, position 
 	}
 	linePrefix := currentLine[:prefixEnd]
 	
+	// Get all content up to cursor position for context analysis
+	contentUpToCursor := ""
+	for i := 0; i <= int(position.Line); i++ {
+		if i < int(position.Line) {
+			contentUpToCursor += lines[i] + "\n"
+		} else {
+			contentUpToCursor += linePrefix
+		}
+	}
+	
 	// Determine the context and provide appropriate completions
-	context := c.determineCompletionContext(linePrefix)
+	context := c.determineCompletionContext(contentUpToCursor)
 	
 	switch context {
 	case CompletionContextTopLevel:
 		completions = append(completions, c.getTopLevelCompletions()...)
 	case CompletionContextService:
 		completions = append(completions, c.getServiceCompletions()...)
+		completions = append(completions, c.getTypeCompletions()...)
 	case CompletionContextScope:
 		completions = append(completions, c.getScopeCompletions()...)
 	case CompletionContextStruct:
 		completions = append(completions, c.getStructCompletions()...)
+		completions = append(completions, c.getTypeCompletions()...)
 	case CompletionContextEnum:
 		completions = append(completions, c.getEnumCompletions()...)
 	case CompletionContextType:
@@ -78,35 +90,70 @@ const (
 	CompletionContextGeneral
 )
 
-// determineCompletionContext analyzes the line prefix to determine completion context
-func (c *CompletionProvider) determineCompletionContext(linePrefix string) CompletionContext {
-	trimmed := strings.TrimSpace(linePrefix)
-	
-	// Check for specific contexts
-	if strings.Contains(linePrefix, "service ") && strings.Contains(linePrefix, "{") {
-		return CompletionContextService
-	}
-	if strings.Contains(linePrefix, "scope ") && strings.Contains(linePrefix, "{") {
-		return CompletionContextScope
-	}
-	if strings.Contains(linePrefix, "struct ") && strings.Contains(linePrefix, "{") {
-		return CompletionContextStruct
-	}
-	if strings.Contains(linePrefix, "enum ") && strings.Contains(linePrefix, "{") {
-		return CompletionContextEnum
+// determineCompletionContext analyzes the content up to cursor to determine completion context
+func (c *CompletionProvider) determineCompletionContext(contentUpToCursor string) CompletionContext {
+	lines := strings.Split(contentUpToCursor, "\n")
+	lastLine := ""
+	if len(lines) > 0 {
+		lastLine = strings.TrimSpace(lines[len(lines)-1])
 	}
 	
 	// Check for type context (after ':' or parameter lists)
-	if strings.Contains(trimmed, ":") && !strings.HasSuffix(trimmed, ":") {
+	if strings.Contains(lastLine, ":") && !strings.HasSuffix(lastLine, ":") {
 		return CompletionContextType
 	}
 	
-	// Top-level context (outside any blocks)
-	if !strings.Contains(linePrefix, "{") || 
-	   (strings.Count(linePrefix, "{") <= strings.Count(linePrefix, "}")) {
+	// Check if we're on the same line as a declaration (scope without braces yet)
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "scope ") && !strings.Contains(line, "{") {
+			return CompletionContextScope
+		}
+	}
+	
+	// Count braces to determine if we're inside a block
+	openBraces := strings.Count(contentUpToCursor, "{")
+	closeBraces := strings.Count(contentUpToCursor, "}")
+	
+	// If we're not inside any block
+	if openBraces <= closeBraces {
 		return CompletionContextTopLevel
 	}
 	
+	// We're inside a block - determine which type by looking backwards for the most recent declaration
+	reversedLines := make([]string, len(lines))
+	copy(reversedLines, lines)
+	
+	// Reverse the slice to search backwards
+	for i := 0; i < len(reversedLines)/2; i++ {
+		j := len(reversedLines) - 1 - i
+		reversedLines[i], reversedLines[j] = reversedLines[j], reversedLines[i]
+	}
+	
+	blockDepth := 0
+	for _, line := range reversedLines {
+		// Count braces on this line (in reverse)
+		blockDepth += strings.Count(line, "}") - strings.Count(line, "{")
+		
+		// If we've reached the block we're inside of
+		if blockDepth <= 0 && strings.Contains(line, "{") {
+			if strings.Contains(line, "service ") {
+				return CompletionContextService
+			}
+			if strings.Contains(line, "scope ") {
+				return CompletionContextScope
+			}
+			if strings.Contains(line, "struct ") {
+				return CompletionContextStruct
+			}
+			if strings.Contains(line, "enum ") {
+				return CompletionContextEnum
+			}
+			break
+		}
+	}
+	
+	// If we're inside a block but couldn't determine the specific type, provide general completions
 	return CompletionContextGeneral
 }
 

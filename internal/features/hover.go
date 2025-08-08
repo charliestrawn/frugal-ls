@@ -25,6 +25,17 @@ func (h *HoverProvider) ProvideHover(doc *document.Document, position protocol.P
 		return nil, nil
 	}
 	
+	// Validate position bounds
+	lines := strings.Split(string(doc.Content), "\n")
+	if int(position.Line) >= len(lines) {
+		return nil, nil // Beyond last line
+	}
+	
+	currentLine := lines[position.Line]
+	if int(position.Character) > len(currentLine) {
+		return nil, nil // Beyond line end
+	}
+	
 	// Find the node at the position
 	node := FindNodeAtPosition(doc.ParseResult.GetRootNode(), doc.Content, uint(position.Line), uint(position.Character))
 	if node == nil {
@@ -66,8 +77,15 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 	// Handle different node types
 	switch nodeType {
 	case "identifier":
-		// Find the symbol this identifier refers to
-		if symbolInfo := h.findSymbolByName(nodeText, doc); symbolInfo != nil {
+		// Check if this identifier is in a special context (method, field, etc.)
+		if methodInfo := h.getMethodInfo(node, doc); methodInfo != "" {
+			content.WriteString(methodInfo)
+			found = true
+		} else if fieldInfo := h.getFieldInfo(node, doc); fieldInfo != "" {
+			content.WriteString(fieldInfo)  
+			found = true
+		} else if symbolInfo := h.findSymbolByName(nodeText, doc); symbolInfo != nil {
+			// Find the symbol this identifier refers to
 			content.WriteString(h.formatSymbolInfo(symbolInfo, doc))
 			found = true
 		}
@@ -429,5 +447,156 @@ func (h *HoverProvider) getKeywordInfo(keyword string) string {
 	if info, exists := keywordMap[keyword]; exists {
 		return info
 	}
+	return ""
+}
+
+// getMethodInfo checks if an identifier is a method and returns method information
+func (h *HoverProvider) getMethodInfo(node *tree_sitter.Node, doc *document.Document) string {
+	// Walk up the tree to see if we're in a method declaration context
+	current := node.Parent()
+	for current != nil {
+		nodeType := current.Kind()
+		
+		// Check if we're in a function/method declaration
+		if nodeType == "function_declaration" || nodeType == "method_declaration" || nodeType == "function_definition" {
+			return h.formatMethodDeclaration(current, doc.Content)
+		}
+		
+		// If we find a service body, we might be in a method
+		if nodeType == "service_body" {
+			// Check if this identifier is the method name in a method declaration
+			if h.isMethodIdentifier(node, current) {
+				return h.formatMethodFromContext(node, current, doc.Content)
+			}
+		}
+		
+		current = current.Parent()
+	}
+	
+	return ""
+}
+
+// getFieldInfo checks if an identifier is a field and returns field information  
+func (h *HoverProvider) getFieldInfo(node *tree_sitter.Node, doc *document.Document) string {
+	// Walk up the tree to see if we're in a field declaration context
+	current := node.Parent()
+	for current != nil {
+		nodeType := current.Kind()
+		
+		// Check if we're in a field declaration
+		if nodeType == "field_declaration" || nodeType == "field" {
+			return h.formatFieldDeclaration(current, doc.Content)
+		}
+		
+		// If we find a struct body, we might be in a field
+		if nodeType == "struct_body" {
+			// Check if this identifier is the field name/type in a field declaration
+			if h.isFieldIdentifier(node, current) {
+				return h.formatFieldFromContext(node, current, doc.Content)
+			}
+		}
+		
+		current = current.Parent()
+	}
+	
+	return ""
+}
+
+// isMethodIdentifier checks if the given identifier node is a method name
+func (h *HoverProvider) isMethodIdentifier(identifierNode, serviceBody *tree_sitter.Node) bool {
+	// Look for method declarations in service body
+	childCount := serviceBody.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := serviceBody.Child(i)
+		
+		// Find identifier nodes that could be method names  
+		if h.containsNode(child, identifierNode) {
+			// Check if it's positioned where a method name would be
+			// This is a simplified check - in a real implementation you'd parse the grammar more carefully
+			return true
+		}
+	}
+	return false
+}
+
+// isFieldIdentifier checks if the given identifier node is a field name/type
+func (h *HoverProvider) isFieldIdentifier(identifierNode, structBody *tree_sitter.Node) bool {
+	// Look for field declarations in struct body
+	childCount := structBody.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := structBody.Child(i)
+		
+		if h.containsNode(child, identifierNode) {
+			return true
+		}
+	}
+	return false
+}
+
+// containsNode checks if parent contains the child node
+func (h *HoverProvider) containsNode(parent, target *tree_sitter.Node) bool {
+	if parent == target {
+		return true
+	}
+	
+	childCount := parent.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := parent.Child(i)
+		if h.containsNode(child, target) {
+			return true
+		}
+	}
+	return false
+}
+
+// formatMethodDeclaration formats a method declaration for hover
+func (h *HoverProvider) formatMethodDeclaration(node *tree_sitter.Node, source []byte) string {
+	methodText := ast.GetText(node, source)
+	return fmt.Sprintf("**Method**\n\n```frugal\n%s\n```", methodText)
+}
+
+// formatMethodFromContext extracts method information from service context
+func (h *HoverProvider) formatMethodFromContext(identifierNode, serviceBody *tree_sitter.Node, source []byte) string {
+	// Find the line containing this identifier 
+	identifierText := ast.GetText(identifierNode, source)
+	
+	// Look through service body for method declarations
+	childCount := serviceBody.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := serviceBody.Child(i)
+		childText := ast.GetText(child, source)
+		
+		// If this line contains our identifier and looks like a method
+		if strings.Contains(childText, identifierText) && (strings.Contains(childText, "(") && strings.Contains(childText, ")")) {
+			return fmt.Sprintf("**Method**: `%s`\n\n```frugal\n%s\n```", identifierText, strings.TrimSpace(childText))
+		}
+	}
+	
+	return ""
+}
+
+// formatFieldDeclaration formats a field declaration for hover  
+func (h *HoverProvider) formatFieldDeclaration(node *tree_sitter.Node, source []byte) string {
+	fieldText := ast.GetText(node, source)
+	return fmt.Sprintf("**Field**\n\n```frugal\n%s\n```", fieldText)
+}
+
+// formatFieldFromContext extracts field information from struct context
+func (h *HoverProvider) formatFieldFromContext(identifierNode, structBody *tree_sitter.Node, source []byte) string {
+	// Find the line containing this identifier
+	identifierText := ast.GetText(identifierNode, source)
+	
+	// Look through struct body for field declarations
+	childCount := structBody.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := structBody.Child(i)
+		childText := ast.GetText(child, source)
+		
+		// If this line contains our identifier and looks like a field
+		if strings.Contains(childText, identifierText) {
+			return fmt.Sprintf("**Field**: `%s`\n\n```frugal\n%s\n```", identifierText, strings.TrimSpace(childText))
+		}
+	}
+	
 	return ""
 }

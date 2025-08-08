@@ -28,8 +28,12 @@ func createTestDocumentForHover(uri, content string) (*document.Document, error)
 		symbols = ast.ExtractSymbols(result.GetRootNode(), []byte(content))
 	}
 
+	// Extract path from URI for proper validation
+	path := strings.TrimPrefix(uri, "file://")
+	
 	doc := &document.Document{
 		URI:         uri,
+		Path:        path,
 		Content:     []byte(content),
 		Version:     1,
 		ParseResult: result,

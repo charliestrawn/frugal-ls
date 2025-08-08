@@ -1,6 +1,7 @@
 package features
 
 import (
+	"strings"
 	"testing"
 
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -404,9 +405,12 @@ func (p *ReferencesProvider) walkTreeForIdentifier(node *tree_sitter.Node, resul
 
 // Test helper to create a document with parsing
 func createTestDocument(uri, content string) (*document.Document, error) {
+	// Extract path from URI for proper validation
+	path := strings.TrimPrefix(uri, "file://")
+	
 	doc := &document.Document{
 		URI:     uri,
-		Path:    uri,
+		Path:    path,
 		Content: []byte(content),
 		Version: 1,
 	}

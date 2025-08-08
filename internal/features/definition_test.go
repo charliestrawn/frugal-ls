@@ -1,6 +1,7 @@
 package features
 
 import (
+	"strings"
 	"testing"
 
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -27,8 +28,12 @@ func createTestDocumentForDefinition(uri, content string) (*document.Document, e
 		symbols = ast.ExtractSymbols(result.GetRootNode(), []byte(content))
 	}
 
+	// Extract path from URI for proper validation
+	path := strings.TrimPrefix(uri, "file://")
+	
 	doc := &document.Document{
 		URI:         uri,
+		Path:        path,
 		Content:     []byte(content),
 		Version:     1,
 		ParseResult: result,

@@ -24,6 +24,17 @@ func (d *DefinitionProvider) ProvideDefinition(doc *document.Document, position 
 		return nil, nil
 	}
 	
+	// Validate position bounds
+	lines := strings.Split(string(doc.Content), "\n")
+	if int(position.Line) >= len(lines) {
+		return nil, nil // Beyond last line
+	}
+	
+	currentLine := lines[position.Line]
+	if int(position.Character) > len(currentLine) {
+		return nil, nil // Beyond line end
+	}
+	
 	// Find the node at the position
 	node := FindNodeAtPosition(doc.ParseResult.GetRootNode(), doc.Content, uint(position.Line), uint(position.Character))
 	if node == nil {
