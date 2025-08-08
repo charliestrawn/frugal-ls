@@ -38,6 +38,7 @@ type Server struct {
 	documentHighlightProvider *features.DocumentHighlightProvider
 	codeActionProvider     *features.CodeActionProvider
 	formattingProvider     *features.FormattingProvider
+	semanticTokensProvider *features.SemanticTokensProvider
 }
 
 // NewServer creates a new Frugal LSP server
@@ -69,6 +70,7 @@ func NewServer() (*Server, error) {
 		documentHighlightProvider: features.NewDocumentHighlightProvider(),
 		codeActionProvider:    features.NewCodeActionProvider(),
 		formattingProvider:    features.NewFormattingProvider(),
+		semanticTokensProvider: features.NewSemanticTokensProvider(),
 	}
 
 	// Set up GLSP server
@@ -89,6 +91,8 @@ func NewServer() (*Server, error) {
 		TextDocumentCodeAction:    lspServer.textDocumentCodeAction,
 		TextDocumentFormatting:    lspServer.textDocumentFormatting,
 		TextDocumentRangeFormatting: lspServer.textDocumentRangeFormatting,
+		TextDocumentSemanticTokensFull: lspServer.textDocumentSemanticTokensFull,
+		TextDocumentSemanticTokensRange: lspServer.textDocumentSemanticTokensRange,
 		WorkspaceSymbol:          lspServer.workspaceSymbol,
 	}
 
@@ -275,6 +279,11 @@ func (s *Server) getServerCapabilities() protocol.ServerCapabilities {
 		},
 		DocumentFormattingProvider:      &[]bool{true}[0],
 		DocumentRangeFormattingProvider: &[]bool{true}[0],
+		SemanticTokensProvider: &protocol.SemanticTokensOptions{
+			Legend: s.semanticTokensProvider.GetLegend(),
+			Full:   &[]bool{true}[0],
+			Range:  &[]bool{true}[0],
+		},
 	}
 }
 
@@ -452,6 +461,43 @@ func (s *Server) textDocumentRangeFormatting(context *glsp.Context, params *prot
 	
 	s.logger.Printf("Providing %d range formatting edits for %s", len(edits), params.TextDocument.URI)
 	return edits, nil
+}
+
+// textDocumentSemanticTokensFull handles full document semantic tokens requests
+func (s *Server) textDocumentSemanticTokensFull(context *glsp.Context, params *protocol.SemanticTokensParams) (*protocol.SemanticTokens, error) {
+	doc, exists := s.docManager.GetDocument(params.TextDocument.URI)
+	if !exists || !doc.IsValidFrugalFile() {
+		return nil, nil
+	}
+	
+	s.logger.Printf("Providing semantic tokens for %s", params.TextDocument.URI)
+	
+	tokens, err := s.semanticTokensProvider.ProvideSemanticTokens(doc)
+	if err != nil {
+		s.logger.Printf("Semantic tokens error for %s: %v", params.TextDocument.URI, err)
+		return nil, err
+	}
+	
+	s.logger.Printf("Provided %d semantic token data points for %s", len(tokens.Data), params.TextDocument.URI)
+	return tokens, nil
+}
+
+// textDocumentSemanticTokensRange handles range semantic tokens requests
+func (s *Server) textDocumentSemanticTokensRange(context *glsp.Context, params *protocol.SemanticTokensRangeParams) (any, error) {
+	doc, exists := s.docManager.GetDocument(params.TextDocument.URI)
+	if !exists || !doc.IsValidFrugalFile() {
+		return nil, nil
+	}
+	
+	s.logger.Printf("Providing semantic tokens range for %s", params.TextDocument.URI)
+	
+	tokens, err := s.semanticTokensProvider.ProvideSemanticTokensRange(doc, params.Range)
+	if err != nil {
+		s.logger.Printf("Semantic tokens range error for %s: %v", params.TextDocument.URI, err)
+		return nil, err
+	}
+	
+	return tokens, nil
 }
 
 // getAllDocuments returns all currently managed documents
