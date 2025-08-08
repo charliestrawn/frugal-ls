@@ -13,6 +13,19 @@ import (
 	"frugal-ls/pkg/ast"
 )
 
+// DiagnosticsProvider is a minimal interface to avoid circular imports
+type DiagnosticsProvider interface {
+	ProvideDiagnostics(doc *Document) []protocol.Diagnostic
+}
+
+// Global diagnostics provider - initialized by the server
+var globalDiagnosticsProvider DiagnosticsProvider
+
+// SetDiagnosticsProvider sets the diagnostics provider (called from server initialization)
+func SetDiagnosticsProvider(provider DiagnosticsProvider) {
+	globalDiagnosticsProvider = provider
+}
+
 // Document represents an open document in the LSP server
 type Document struct {
 	URI     string
@@ -219,11 +232,22 @@ func (m *Manager) parseDocument(doc *Document) error {
 	return nil
 }
 
-// GetDiagnostics converts parse errors to LSP diagnostics
+// GetDiagnostics provides comprehensive diagnostics including parse errors and semantic validation
 func (d *Document) GetDiagnostics() []protocol.Diagnostic {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 	
+	// If we have a comprehensive diagnostics provider, use it
+	if globalDiagnosticsProvider != nil {
+		return globalDiagnosticsProvider.ProvideDiagnostics(d)
+	}
+	
+	// Fallback to basic parse error diagnostics
+	return d.getBasicParseErrorDiagnostics()
+}
+
+// getBasicParseErrorDiagnostics provides basic parse error diagnostics as fallback
+func (d *Document) getBasicParseErrorDiagnostics() []protocol.Diagnostic {
 	if d.ParseResult == nil {
 		return nil
 	}

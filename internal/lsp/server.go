@@ -58,6 +58,10 @@ func NewServer() (*Server, error) {
 	includeResolver := workspace.NewIncludeResolver(workspaceRoots)
 	symbolIndex := workspace.NewSymbolIndex()
 
+	// Initialize diagnostics provider
+	diagnosticsProvider := features.NewDiagnosticsProvider()
+	document.SetDiagnosticsProvider(diagnosticsProvider)
+
 	// Create the server with language feature providers
 	lspServer := &Server{
 		docManager:             docManager,
