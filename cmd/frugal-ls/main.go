@@ -6,6 +6,9 @@ import (
 	"os"
 
 	tree_sitter "github.com/tree-sitter/go-tree-sitter"
+	protocol "github.com/tliron/glsp/protocol_3_16"
+	"frugal-ls/internal/document"
+	"frugal-ls/internal/features"
 	"frugal-ls/internal/lsp"
 	"frugal-ls/internal/parser"
 	"frugal-ls/pkg/ast"
@@ -21,6 +24,15 @@ func main() {
 				testParseFile(os.Args[2])
 			} else {
 				testParser()
+			}
+			return
+		case "format":
+			// Format file
+			if len(os.Args) > 2 {
+				formatFile(os.Args[2])
+			} else {
+				fmt.Println("Error: format command requires a file argument")
+				fmt.Println("Usage: frugal-ls format <file>")
 			}
 			return
 		case "--help", "-h":
@@ -41,6 +53,7 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Println("  frugal-ls                 Run as LSP server (default)")
+	fmt.Println("  frugal-ls format <file>   Format a .frugal file")
 	fmt.Println("  frugal-ls --test [file]   Test parser with file or sample")
 	fmt.Println("  frugal-ls --version       Show version information")
 	fmt.Println("  frugal-ls --help          Show this help message")
@@ -49,6 +62,9 @@ func printUsage() {
 	fmt.Println("  The server communicates via stdin/stdout using the Language")
 	fmt.Println("  Server Protocol. Use with LSP-compatible editors like VS Code,")
 	fmt.Println("  Vim, Emacs, etc.")
+	fmt.Println()
+	fmt.Println("Format Mode:")
+	fmt.Println("  format <file>              Format and output formatted .frugal file")
 	fmt.Println()
 	fmt.Println("Test Mode:")
 	fmt.Println("  --test                     Parse sample.frugal (if available)")
@@ -169,6 +185,45 @@ func testParseFile(filename string, source ...[]byte) {
 	}
 
 	fmt.Printf("\nParsing test completed for %s\n", filename)
+}
+
+func formatFile(filename string) {
+	// Read the file
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		log.Fatalf("Failed to read file %s: %v", filename, err)
+	}
+
+	// Create a document manually (similar to manager.DidOpen)
+	doc := &document.Document{
+		URI:     "file://" + filename,
+		Path:    filename,
+		Content: content,
+		Version: 1,
+	}
+	
+	// Create a formatting provider
+	formatter := features.NewFormattingProvider()
+	
+	// Format with default options (spaces, tab size 4)
+	options := protocol.FormattingOptions{
+		"tabSize":     4,
+		"insertSpaces": true,
+	}
+	
+	edits, err := formatter.ProvideDocumentFormatting(doc, options)
+	if err != nil {
+		log.Fatalf("Failed to format file: %v", err)
+	}
+	
+	// Apply edits and output result
+	if len(edits) > 0 {
+		// For simple cases, we expect one edit that replaces the entire document
+		fmt.Print(edits[0].NewText)
+	} else {
+		// No changes needed
+		fmt.Print(string(content))
+	}
 }
 
 func printLimitedTree(node *tree_sitter.Node, source []byte, indent int, maxDepth int) {

@@ -85,6 +85,8 @@ func (f *FrugalFormatter) formatNode(node *tree_sitter.Node, source []byte, inde
 	switch nodeType {
 	case "document":
 		return f.formatDocument(node, source, indentLevel)
+	case "comment":
+		return f.formatComment(node, source, indentLevel)
 	case "definition":
 		// Handle the intermediate definition node
 		childCount := node.ChildCount()
@@ -138,14 +140,19 @@ func (f *FrugalFormatter) formatDocument(node *tree_sitter.Node, source []byte, 
 		child := node.Child(i)
 		childType := child.Kind()
 		
-		// Skip whitespace and comments for now
-		if childType == "comment" || childType == "whitespace" {
+		// Skip only whitespace, but preserve comments
+		if childType == "whitespace" {
 			continue
 		}
 		
 		formatted := f.formatNode(child, source, 0)
 		if strings.TrimSpace(formatted) != "" {
 			currentSection = append(currentSection, formatted)
+			
+			// Comments don't trigger section breaks - they stay with the next definition
+			if childType == "comment" {
+				continue
+			}
 			
 			// Determine the actual child type for section breaks
 			actualChildType := f.getActualDefinitionType(child)
@@ -266,7 +273,7 @@ func (f *FrugalFormatter) shouldAddSectionBreak(nodeType string) bool {
 	case "service_definition", "scope_definition":
 		return true
 	case "struct_definition", "exception_definition":
-		return false // Group structs and exceptions together
+		return true // Separate structs and exceptions with blank lines
 	case "enum_definition":
 		return true // Separate enums from other definitions
 	case "const_definition", "typedef_definition":
@@ -320,6 +327,11 @@ func (f *FrugalFormatter) formatNamespace(node *tree_sitter.Node, source []byte)
 
 // formatService formats service definitions
 func (f *FrugalFormatter) formatService(node *tree_sitter.Node, source []byte, indentLevel int) string {
+	// Check if service contains comments - if so, use conservative formatting
+	if f.nodeContainsComments(node, source) {
+		return f.formatConservatively(node, source, indentLevel)
+	}
+	
 	serviceName := f.extractIdentifier(node, source)
 	if serviceName == "" {
 		return f.formatGenericNode(node, source, indentLevel)
@@ -350,6 +362,15 @@ func (f *FrugalFormatter) formatService(node *tree_sitter.Node, source []byte, i
 	
 	result.WriteString("}")
 	return result.String()
+}
+
+// formatComment formats comment nodes
+func (f *FrugalFormatter) formatComment(node *tree_sitter.Node, source []byte, indentLevel int) string {
+	indent := f.getIndent(indentLevel)
+	commentText := strings.TrimSpace(ast.GetText(node, source))
+	
+	// Preserve the original comment format
+	return indent + commentText
 }
 
 // formatScope formats scope definitions  
@@ -391,6 +412,11 @@ func (f *FrugalFormatter) formatScope(node *tree_sitter.Node, source []byte, ind
 
 // formatStruct formats struct definitions
 func (f *FrugalFormatter) formatStruct(node *tree_sitter.Node, source []byte, indentLevel int) string {
+	// Check if struct contains comments - if so, use conservative formatting
+	if f.nodeContainsComments(node, source) {
+		return f.formatConservatively(node, source, indentLevel)
+	}
+	
 	structName := f.extractIdentifier(node, source)
 	if structName == "" {
 		return f.formatGenericNode(node, source, indentLevel)
@@ -898,4 +924,62 @@ func (f *FrugalFormatter) getIndent(level int) string {
 		return strings.Repeat(" ", level*f.indentSize)
 	}
 	return strings.Repeat("\t", level)
+}
+
+// nodeContainsComments checks if a node or its children contain comments
+func (f *FrugalFormatter) nodeContainsComments(node *tree_sitter.Node, source []byte) bool {
+	if node == nil {
+		return false
+	}
+	
+	// Check current node
+	if node.Kind() == "comment" {
+		return true
+	}
+	
+	// Check children recursively
+	childCount := node.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := node.Child(i)
+		if f.nodeContainsComments(child, source) {
+			return true
+		}
+	}
+	
+	return false
+}
+
+// formatConservatively provides conservative formatting that preserves comments and spacing
+func (f *FrugalFormatter) formatConservatively(node *tree_sitter.Node, source []byte, indentLevel int) string {
+	indent := f.getIndent(indentLevel)
+	nodeText := ast.GetText(node, source)
+	
+	// Preserve the original text but fix basic indentation
+	lines := strings.Split(nodeText, "\n")
+	var formattedLines []string
+	
+	for i, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+		if trimmedLine == "" {
+			formattedLines = append(formattedLines, "")
+			continue
+		}
+		
+		// For the first line, use the specified indent level
+		if i == 0 {
+			formattedLines = append(formattedLines, indent+trimmedLine)
+		} else {
+			// For subsequent lines, preserve relative indentation
+			originalIndent := len(line) - len(strings.TrimLeft(line, " \t"))
+			if originalIndent > 0 {
+				// Preserve relative indentation but start from base indent
+				relativeIndent := f.getIndent(indentLevel + 1)
+				formattedLines = append(formattedLines, relativeIndent+trimmedLine)
+			} else {
+				formattedLines = append(formattedLines, indent+trimmedLine)
+			}
+		}
+	}
+	
+	return strings.Join(formattedLines, "\n")
 }
