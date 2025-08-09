@@ -40,6 +40,7 @@ type Server struct {
 	codeActionProvider     *features.CodeActionProvider
 	formattingProvider     *features.FormattingProvider
 	semanticTokensProvider *features.SemanticTokensProvider
+	renameProvider         *features.RenameProvider
 }
 
 // NewServer creates a new Frugal LSP server
@@ -78,6 +79,7 @@ func NewServer() (*Server, error) {
 		codeActionProvider:    features.NewCodeActionProvider(),
 		formattingProvider:    features.NewFormattingProvider(),
 		semanticTokensProvider: features.NewSemanticTokensProvider(),
+		renameProvider:        features.NewRenameProvider(),
 	}
 
 	// Set up GLSP server
@@ -100,6 +102,8 @@ func NewServer() (*Server, error) {
 		TextDocumentRangeFormatting: lspServer.textDocumentRangeFormatting,
 		TextDocumentSemanticTokensFull: lspServer.textDocumentSemanticTokensFull,
 		TextDocumentSemanticTokensRange: lspServer.textDocumentSemanticTokensRange,
+		TextDocumentPrepareRename: lspServer.textDocumentPrepareRename,
+		TextDocumentRename:       lspServer.textDocumentRename,
 		WorkspaceSymbol:          lspServer.workspaceSymbol,
 	}
 
@@ -293,6 +297,9 @@ func (s *Server) getServerCapabilities() protocol.ServerCapabilities {
 		},
 		DocumentFormattingProvider:      &[]bool{true}[0],
 		DocumentRangeFormattingProvider: &[]bool{true}[0],
+		RenameProvider: &protocol.RenameOptions{
+			PrepareProvider: &[]bool{true}[0],
+		},
 		SemanticTokensProvider: &protocol.SemanticTokensOptions{
 			Legend: s.semanticTokensProvider.GetLegend(),
 			Full:   &[]bool{true}[0],
@@ -507,6 +514,53 @@ func (s *Server) textDocumentSemanticTokensRange(context *glsp.Context, params *
 	}
 	
 	return tokens, nil
+}
+
+// textDocumentPrepareRename handles prepare rename requests
+func (s *Server) textDocumentPrepareRename(context *glsp.Context, params *protocol.PrepareRenameParams) (any, error) {
+	doc, exists := s.docManager.GetDocument(params.TextDocument.URI)
+	if !exists || !doc.IsValidFrugalFile() {
+		return nil, nil
+	}
+
+	s.logger.Printf("Preparing rename for %s", params.TextDocument.URI)
+
+	rangeResult, err := s.renameProvider.PrepareRename(doc, params.Position)
+	if err != nil {
+		s.logger.Printf("Error preparing rename: %v", err)
+		return nil, err
+	}
+
+	return rangeResult, nil
+}
+
+// textDocumentRename handles rename requests
+func (s *Server) textDocumentRename(context *glsp.Context, params *protocol.RenameParams) (*protocol.WorkspaceEdit, error) {
+	doc, exists := s.docManager.GetDocument(params.TextDocument.URI)
+	if !exists || !doc.IsValidFrugalFile() {
+		return nil, nil
+	}
+
+	s.logger.Printf("Renaming symbol to '%s' in %s", params.NewName, params.TextDocument.URI)
+
+	// Get all documents for cross-file rename
+	allDocuments := s.getAllDocuments()
+
+	workspaceEdit, err := s.renameProvider.Rename(doc, params.Position, params.NewName, allDocuments)
+	if err != nil {
+		s.logger.Printf("Error performing rename: %v", err)
+		return nil, err
+	}
+
+	if workspaceEdit != nil {
+		changeCount := 0
+		for _, changes := range workspaceEdit.Changes {
+			changeCount += len(changes)
+		}
+		s.logger.Printf("Rename successful: %d changes across %d files", changeCount, len(workspaceEdit.Changes))
+	}
+
+	return workspaceEdit, nil
 }
 
 // getAllDocuments returns all currently managed documents
