@@ -3,7 +3,7 @@ module frugal-ls
 go 1.23.1
 
 require (
-	github.com/charliestrawn/tree-sitter-frugal v0.0.0-20250808020011-bd5b03b062ae
+	github.com/charliestrawn/tree-sitter-frugal v0.0.0-20250809020924-43e46220c259
 	github.com/tliron/glsp v0.2.2
 	github.com/tree-sitter/go-tree-sitter v0.25.0
 )
