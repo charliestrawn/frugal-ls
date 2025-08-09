@@ -248,11 +248,11 @@ func (d *Document) GetDiagnostics() []protocol.Diagnostic {
 
 // getBasicParseErrorDiagnostics provides basic parse error diagnostics as fallback
 func (d *Document) getBasicParseErrorDiagnostics() []protocol.Diagnostic {
-	if d.ParseResult == nil {
-		return nil
-	}
+	diagnostics := make([]protocol.Diagnostic, 0)
 	
-	var diagnostics []protocol.Diagnostic
+	if d.ParseResult == nil {
+		return diagnostics
+	}
 	
 	for _, err := range d.ParseResult.Errors {
 		diagnostic := protocol.Diagnostic{

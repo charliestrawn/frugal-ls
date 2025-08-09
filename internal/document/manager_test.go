@@ -394,3 +394,50 @@ func TestDocumentURIPath(t *testing.T) {
 		})
 	}
 }
+
+func TestDocumentNilParseResult(t *testing.T) {
+	// Create a document with no parse result
+	doc := &Document{
+		URI:         "file:///test.frugal",
+		Path:        "/test.frugal", 
+		Content:     []byte("test content"),
+		Version:     1,
+		ParseResult: nil, // No parse result
+	}
+
+	// Ensure we're using the fallback path by not setting global provider
+	globalDiagnosticsProvider = nil
+
+	diagnostics := doc.GetDiagnostics()
+	
+	// Should return empty array, not nil - this is critical for LSP protocol compliance
+	if diagnostics == nil {
+		t.Error("GetDiagnostics should return empty array, not nil - this violates LSP protocol")
+	}
+	
+	if len(diagnostics) != 0 {
+		t.Errorf("Expected empty diagnostics array, got %d diagnostics", len(diagnostics))
+	}
+}
+
+func TestGetBasicParseErrorDiagnosticsNilParseResult(t *testing.T) {
+	// Create a document with no parse result
+	doc := &Document{
+		URI:         "file:///test.frugal",
+		Path:        "/test.frugal", 
+		Content:     []byte("test content"),
+		Version:     1,
+		ParseResult: nil, // No parse result
+	}
+
+	diagnostics := doc.getBasicParseErrorDiagnostics()
+	
+	// Should return empty array, not nil
+	if diagnostics == nil {
+		t.Error("getBasicParseErrorDiagnostics should return empty array, not nil")
+	}
+	
+	if len(diagnostics) != 0 {
+		t.Errorf("Expected empty diagnostics array, got %d diagnostics", len(diagnostics))
+	}
+}

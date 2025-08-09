@@ -309,6 +309,92 @@ enum Status {
 	}
 }
 
+func TestDiagnosticsTypedefTypes(t *testing.T) {
+	provider := NewDiagnosticsProvider()
+
+	content := `typedef string UserId
+
+struct User {
+    1: UserId id,
+    2: string name
+}`
+
+	doc := createTestDocumentForDiagnostics(t, "file:///test.frugal", content)
+	defer doc.ParseResult.Close()
+
+	diagnostics := provider.ProvideDiagnostics(doc)
+
+	// Should have no unknown type errors for typedef types
+	for _, diagnostic := range diagnostics {
+		if strings.Contains(diagnostic.Message, "Unknown type 'UserId'") {
+			t.Errorf("Typedef type should be recognized: %s", diagnostic.Message)
+		}
+	}
+}
+
+func TestDiagnosticsMethodParametersVsThrowsFieldIds(t *testing.T) {
+	provider := NewDiagnosticsProvider()
+
+	// This should be valid - throws and parameters have separate field ID namespaces
+	content := `exception UserNotFound {
+    1: string message
+}
+
+service UserService {
+    User getUser(1: i64 userId) throws (1: UserNotFound ex)
+}`
+
+	doc := createTestDocumentForDiagnostics(t, "file:///test.frugal", content)
+	defer doc.ParseResult.Close()
+
+	diagnostics := provider.ProvideDiagnostics(doc)
+
+	// Should NOT have duplicate field ID errors between parameters and throws
+	for _, diagnostic := range diagnostics {
+		if strings.Contains(diagnostic.Message, "Duplicate field ID 1") {
+			t.Errorf("Parameters and throws should have separate field ID namespaces: %s", diagnostic.Message)
+		}
+	}
+}
+
+func TestDiagnosticsDuplicateThrowsFieldIds(t *testing.T) {
+	provider := NewDiagnosticsProvider()
+
+	// This should be invalid - duplicate field IDs within same throws list
+	content := `exception UserNotFound {
+    1: string message
+}
+
+exception ValidationError {
+    1: string details
+}
+
+service UserService {
+    User getUser(1: i64 userId) throws (1: UserNotFound notFound, 1: ValidationError validation)
+}`
+
+	doc := createTestDocumentForDiagnostics(t, "file:///test.frugal", content)
+	defer doc.ParseResult.Close()
+
+	diagnostics := provider.ProvideDiagnostics(doc)
+
+	// Should have duplicate field ID error within throws list
+	found := false
+	for _, diagnostic := range diagnostics {
+		if strings.Contains(diagnostic.Message, "Duplicate field ID 1 in throws list") {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Error("Expected diagnostic for duplicate field ID within throws list")
+		for i, diag := range diagnostics {
+			t.Errorf("Diagnostic %d: %s", i, diag.Message)
+		}
+	}
+}
+
 func TestDiagnosticsParseErrors(t *testing.T) {
 	provider := NewDiagnosticsProvider()
 
@@ -454,4 +540,38 @@ func createTestDocumentForDiagnostics(t *testing.T, uri, content string) *docume
 	}
 
 	return doc
+}
+
+func TestDiagnosticsNeverReturnNil(t *testing.T) {
+	provider := NewDiagnosticsProvider()
+
+	// Test with nil parse result
+	doc := &document.Document{
+		URI:         "file:///test.frugal",
+		Path:        "/test.frugal",
+		Content:     []byte("test content"),
+		Version:     1,
+		ParseResult: nil,
+	}
+
+	diagnostics := provider.ProvideDiagnostics(doc)
+
+	// Should return empty array, not nil - critical for LSP protocol compliance
+	if diagnostics == nil {
+		t.Error("ProvideDiagnostics should return empty array, not nil - this violates LSP protocol")
+	}
+
+	if len(diagnostics) != 0 {
+		t.Errorf("Expected empty diagnostics array, got %d diagnostics", len(diagnostics))
+	}
+
+	// Test with empty content
+	doc2 := createTestDocumentForDiagnostics(t, "file:///empty.frugal", "")
+	defer doc2.ParseResult.Close()
+
+	diagnostics2 := provider.ProvideDiagnostics(doc2)
+
+	if diagnostics2 == nil {
+		t.Error("ProvideDiagnostics should return empty array for empty content, not nil")
+	}
 }

@@ -1,6 +1,7 @@
 package features
 
 import (
+	"fmt"
 	"strings"
 
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -87,7 +88,7 @@ func (d *DefinitionProvider) extractSymbolName(node *tree_sitter.Node, source []
 func (d *DefinitionProvider) findDefinitionsInDocument(symbolName string, doc *document.Document) []protocol.Location {
 	var locations []protocol.Location
 	
-	// Search through document symbols
+	// Search through document symbols first - these are more accurate
 	symbols := doc.GetSymbols()
 	for _, symbol := range symbols {
 		if symbol.Name == symbolName {
@@ -108,13 +109,13 @@ func (d *DefinitionProvider) findDefinitionsInDocument(symbolName string, doc *d
 		}
 	}
 	
-	// Additional searches in the AST for more specific definitions
-	if doc.ParseResult != nil && doc.ParseResult.GetRootNode() != nil {
-		additionalLocations := d.searchASTForDefinitions(symbolName, doc.ParseResult.GetRootNode(), doc)
-		locations = append(locations, additionalLocations...)
+	// If no symbols found, fall back to AST search (less accurate but more comprehensive)
+	if len(locations) == 0 && doc.ParseResult != nil && doc.ParseResult.GetRootNode() != nil {
+		locations = d.searchASTForDefinitions(symbolName, doc.ParseResult.GetRootNode(), doc)
 	}
 	
-	return locations
+	// Deduplicate any remaining duplicates
+	return d.deduplicateLocations(locations)
 }
 
 // searchASTForDefinitions searches the AST for symbol definitions
@@ -343,11 +344,10 @@ func (d *DefinitionProvider) deduplicateLocations(locations []protocol.Location)
 
 // locationKey creates a unique key for a location
 func (d *DefinitionProvider) locationKey(loc protocol.Location) string {
-	return strings.Join([]string{
+	return fmt.Sprintf("%s:%d:%d:%d:%d", 
 		loc.URI,
-		string(rune(loc.Range.Start.Line)),
-		string(rune(loc.Range.Start.Character)),
-		string(rune(loc.Range.End.Line)),
-		string(rune(loc.Range.End.Character)),
-	}, ":")
+		loc.Range.Start.Line,
+		loc.Range.Start.Character,
+		loc.Range.End.Line,
+		loc.Range.End.Character)
 }

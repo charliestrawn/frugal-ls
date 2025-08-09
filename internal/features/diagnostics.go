@@ -22,7 +22,7 @@ func NewDiagnosticsProvider() *DiagnosticsProvider {
 
 // ProvideDiagnostics analyzes a document and returns diagnostics
 func (d *DiagnosticsProvider) ProvideDiagnostics(doc *document.Document) []protocol.Diagnostic {
-	var diagnostics []protocol.Diagnostic
+	diagnostics := make([]protocol.Diagnostic, 0)
 
 	if doc.ParseResult == nil {
 		return diagnostics
@@ -41,7 +41,7 @@ func (d *DiagnosticsProvider) ProvideDiagnostics(doc *document.Document) []proto
 
 // getParseErrorDiagnostics converts parse errors to diagnostics
 func (d *DiagnosticsProvider) getParseErrorDiagnostics(doc *document.Document) []protocol.Diagnostic {
-	var diagnostics []protocol.Diagnostic
+	diagnostics := make([]protocol.Diagnostic, 0)
 
 	for _, err := range doc.ParseResult.Errors {
 		diagnostic := protocol.Diagnostic{
@@ -67,7 +67,7 @@ func (d *DiagnosticsProvider) getParseErrorDiagnostics(doc *document.Document) [
 
 // getSemanticDiagnostics performs semantic validation
 func (d *DiagnosticsProvider) getSemanticDiagnostics(doc *document.Document) []protocol.Diagnostic {
-	var diagnostics []protocol.Diagnostic
+	diagnostics := make([]protocol.Diagnostic, 0)
 
 	root := doc.ParseResult.GetRootNode()
 	if root == nil {
@@ -86,7 +86,7 @@ func (d *DiagnosticsProvider) getSemanticDiagnostics(doc *document.Document) []p
 
 // checkDuplicateDefinitions checks for duplicate struct, service, enum names
 func (d *DiagnosticsProvider) checkDuplicateDefinitions(doc *document.Document, root *tree_sitter.Node) []protocol.Diagnostic {
-	var diagnostics []protocol.Diagnostic
+	diagnostics := make([]protocol.Diagnostic, 0)
 	seenNames := make(map[string]*tree_sitter.Node)
 
 	d.walkDefinitions(root, doc.Content, func(defType, name string, node *tree_sitter.Node) {
@@ -121,7 +121,7 @@ func (d *DiagnosticsProvider) checkDuplicateDefinitions(doc *document.Document, 
 
 // checkFieldIdValidation validates field IDs in structs and methods
 func (d *DiagnosticsProvider) checkFieldIdValidation(doc *document.Document, root *tree_sitter.Node) []protocol.Diagnostic {
-	var diagnostics []protocol.Diagnostic
+	diagnostics := make([]protocol.Diagnostic, 0)
 
 	// Find all structs, exceptions, and service methods
 	d.walkNodes(root, func(node *tree_sitter.Node) {
@@ -139,7 +139,7 @@ func (d *DiagnosticsProvider) checkFieldIdValidation(doc *document.Document, roo
 
 // validateStructFields checks field IDs in struct/exception definitions
 func (d *DiagnosticsProvider) validateStructFields(doc *document.Document, structNode *tree_sitter.Node) []protocol.Diagnostic {
-	var diagnostics []protocol.Diagnostic
+	diagnostics := make([]protocol.Diagnostic, 0)
 	seenFieldIds := make(map[int]*tree_sitter.Node)
 
 	// Find struct body
@@ -195,17 +195,59 @@ func (d *DiagnosticsProvider) validateStructFields(doc *document.Document, struc
 
 // validateMethodFields checks field IDs in method parameters and throws
 func (d *DiagnosticsProvider) validateMethodFields(doc *document.Document, methodNode *tree_sitter.Node) []protocol.Diagnostic {
-	var diagnostics []protocol.Diagnostic
+	diagnostics := make([]protocol.Diagnostic, 0)
 
-	// Check parameter field IDs
-	diagnostics = append(diagnostics, d.validateFieldList(doc, methodNode, "field_list")...)
+	// Find all field_list nodes and determine their context
+	var foundFieldLists []*tree_sitter.Node
+	d.walkNodes(methodNode, func(node *tree_sitter.Node) {
+		if node.Kind() == "field_list" {
+			foundFieldLists = append(foundFieldLists, node)
+		}
+	})
+
+	// Process each field_list - determine context by position and preceding siblings
+	for _, fieldList := range foundFieldLists {
+		context := d.determineFieldListContext(fieldList)
+		diagnostics = append(diagnostics, d.validateSingleFieldList(doc, fieldList, context)...)
+	}
 
 	return diagnostics
 }
 
+// determineFieldListContext determines if a field_list is parameters or throws
+func (d *DiagnosticsProvider) determineFieldListContext(fieldList *tree_sitter.Node) string {
+	parent := fieldList.Parent()
+	if parent == nil || parent.Kind() != "function_definition" {
+		return "parameter list" // Default
+	}
+
+	// Find the position of this field_list and check for throws before it
+	childCount := parent.ChildCount()
+	var fieldListPosition uint = childCount // Initialize to impossible value
+	var throwsPosition uint = childCount    // Initialize to impossible value
+
+	// First pass: find positions
+	for i := uint(0); i < childCount; i++ {
+		child := parent.Child(i)
+		if child == fieldList {
+			fieldListPosition = i
+		}
+		if child.Kind() == "throws" {
+			throwsPosition = i
+		}
+	}
+
+	// If throws comes before this field_list, it's a throws list
+	if throwsPosition < fieldListPosition {
+		return "throws list"
+	}
+
+	return "parameter list"
+}
+
 // validateFieldList validates field IDs in a field list (parameters, throws, etc.)
 func (d *DiagnosticsProvider) validateFieldList(doc *document.Document, parentNode *tree_sitter.Node, listType string) []protocol.Diagnostic {
-	var diagnostics []protocol.Diagnostic
+	diagnostics := make([]protocol.Diagnostic, 0)
 	seenFieldIds := make(map[int]*tree_sitter.Node)
 
 	// Find all field lists of the specified type
@@ -246,9 +288,47 @@ func (d *DiagnosticsProvider) validateFieldList(doc *document.Document, parentNo
 	return diagnostics
 }
 
+// validateSingleFieldList validates field IDs within a single field list
+func (d *DiagnosticsProvider) validateSingleFieldList(doc *document.Document, fieldListNode *tree_sitter.Node, contextName string) []protocol.Diagnostic {
+	diagnostics := make([]protocol.Diagnostic, 0)
+	seenFieldIds := make(map[int]*tree_sitter.Node)
+
+	childCount := fieldListNode.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := fieldListNode.Child(i)
+		if child.Kind() == "field" {
+			fieldId, fieldIdNode := d.extractFieldId(child, doc.Content)
+			if fieldId == 0 {
+				continue
+			}
+
+			if existingNode, exists := seenFieldIds[fieldId]; exists {
+				diagnostic := protocol.Diagnostic{
+					Range:    d.nodeToRange(fieldIdNode, doc.Content),
+					Severity: &[]protocol.DiagnosticSeverity{protocol.DiagnosticSeverityError}[0],
+					Source:   &[]string{"frugal-ls"}[0],
+					Message:  fmt.Sprintf("Duplicate field ID %d in %s", fieldId, contextName),
+					RelatedInformation: []protocol.DiagnosticRelatedInformation{{
+						Location: protocol.Location{
+							URI:   doc.URI,
+							Range: d.nodeToRange(existingNode, doc.Content),
+						},
+						Message: fmt.Sprintf("Field ID %d first used here", fieldId),
+					}},
+				}
+				diagnostics = append(diagnostics, diagnostic)
+			} else {
+				seenFieldIds[fieldId] = fieldIdNode
+			}
+		}
+	}
+
+	return diagnostics
+}
+
 // checkUnusedImports checks for unused include statements
 func (d *DiagnosticsProvider) checkUnusedImports(doc *document.Document, root *tree_sitter.Node) []protocol.Diagnostic {
-	var diagnostics []protocol.Diagnostic
+	diagnostics := make([]protocol.Diagnostic, 0)
 
 	// For now, just check if includes exist - full cross-file analysis would be more complex
 	// This is a placeholder for future enhancement
@@ -258,7 +338,7 @@ func (d *DiagnosticsProvider) checkUnusedImports(doc *document.Document, root *t
 
 // checkNamingConventions validates naming conventions
 func (d *DiagnosticsProvider) checkNamingConventions(doc *document.Document, root *tree_sitter.Node) []protocol.Diagnostic {
-	var diagnostics []protocol.Diagnostic
+	diagnostics := make([]protocol.Diagnostic, 0)
 
 	d.walkDefinitions(root, doc.Content, func(defType, name string, node *tree_sitter.Node) {
 		if name == "" {
@@ -299,7 +379,7 @@ func (d *DiagnosticsProvider) checkNamingConventions(doc *document.Document, roo
 
 // checkTypeReferences validates that referenced types exist
 func (d *DiagnosticsProvider) checkTypeReferences(doc *document.Document, root *tree_sitter.Node) []protocol.Diagnostic {
-	var diagnostics []protocol.Diagnostic
+	diagnostics := make([]protocol.Diagnostic, 0)
 
 	// Collect all defined types
 	definedTypes := d.collectDefinedTypes(root, doc.Content)
@@ -421,7 +501,7 @@ func (d *DiagnosticsProvider) collectDefinedTypes(root *tree_sitter.Node, conten
 
 	// Add user-defined types
 	d.walkDefinitions(root, content, func(defType, name string, node *tree_sitter.Node) {
-		if defType == "struct" || defType == "exception" || defType == "enum" {
+		if defType == "struct" || defType == "exception" || defType == "enum" || defType == "typedef" {
 			definedTypes[name] = true
 		}
 	})

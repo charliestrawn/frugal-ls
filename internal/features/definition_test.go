@@ -317,3 +317,90 @@ func TestProvideDefinitionNilDocument(t *testing.T) {
 		t.Error("Expected no definitions for document without parse result")
 	}
 }
+
+func TestProvideDefinitionNoDuplicates(t *testing.T) {
+	provider := NewDefinitionProvider()
+
+	content := `struct User {
+    1: i64 id,
+    2: string name
+}
+
+service UserService {
+    User getUser(1: i64 userId)
+}`
+
+	doc, err := createTestDocumentForDefinition("file:///test.frugal", content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+	defer doc.ParseResult.Close()
+
+	allDocs := map[string]*document.Document{
+		"file:///test.frugal": doc,
+	}
+
+	// Position at "User" in the service method return type
+	position := protocol.Position{Line: 6, Character: 4}
+	locations, err := provider.ProvideDefinition(doc, position, allDocs)
+	if err != nil {
+		t.Fatalf("ProvideDefinition failed: %v", err)
+	}
+
+	if len(locations) == 0 {
+		t.Fatal("Expected at least one definition location")
+	}
+
+	if len(locations) > 1 {
+		t.Errorf("Expected exactly 1 definition location, got %d duplicates:", len(locations))
+		for i, loc := range locations {
+			t.Errorf("  Location %d: URI=%s, Line=%d, Char=%d-%d", 
+				i, loc.URI, loc.Range.Start.Line, loc.Range.Start.Character, loc.Range.End.Character)
+		}
+	}
+
+	// Should point to the struct definition at line 0
+	location := locations[0]
+	if location.Range.Start.Line != 0 {
+		t.Errorf("Expected definition at line 0, got line %d", location.Range.Start.Line)
+	}
+}
+
+func TestDeduplicateLocations(t *testing.T) {
+	provider := NewDefinitionProvider()
+
+	// Create some duplicate locations
+	locations := []protocol.Location{
+		{
+			URI: "file:///test.frugal",
+			Range: protocol.Range{
+				Start: protocol.Position{Line: 0, Character: 7},
+				End:   protocol.Position{Line: 0, Character: 11},
+			},
+		},
+		{
+			URI: "file:///test.frugal",
+			Range: protocol.Range{
+				Start: protocol.Position{Line: 0, Character: 7},
+				End:   protocol.Position{Line: 0, Character: 11},
+			},
+		},
+		{
+			URI: "file:///test.frugal",
+			Range: protocol.Range{
+				Start: protocol.Position{Line: 1, Character: 5},
+				End:   protocol.Position{Line: 1, Character: 9},
+			},
+		},
+	}
+
+	deduplicated := provider.deduplicateLocations(locations)
+
+	if len(deduplicated) != 2 {
+		t.Errorf("Expected 2 unique locations after deduplication, got %d", len(deduplicated))
+		for i, loc := range deduplicated {
+			t.Errorf("  Location %d: Line=%d, Char=%d-%d", 
+				i, loc.Range.Start.Line, loc.Range.Start.Character, loc.Range.End.Character)
+		}
+	}
+}
