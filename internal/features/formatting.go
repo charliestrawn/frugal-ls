@@ -54,45 +54,6 @@ func (f *FormattingProvider) ProvideDocumentRangeFormatting(doc *document.Docume
 	return f.ProvideDocumentFormatting(doc, options)
 }
 
-// formatDocument applies formatting rules to the document
-func (f *FormattingProvider) formatDocument(source []byte, root interface{}, options protocol.FormattingOptions) string {
-	lines := strings.Split(string(source), "\n")
-	var formattedLines []string
-
-	indentLevel := 0
-	indentString := f.getIndentString(options)
-
-	for _, line := range lines {
-		trimmedLine := strings.TrimSpace(line)
-
-		// Skip empty lines
-		if trimmedLine == "" {
-			formattedLines = append(formattedLines, "")
-			continue
-		}
-
-		// Adjust indent level based on content
-		if f.isClosingBrace(trimmedLine) {
-			indentLevel = max(0, indentLevel-1)
-		}
-
-		// Apply indentation
-		formattedLine := strings.Repeat(indentString, indentLevel) + trimmedLine
-		formattedLines = append(formattedLines, formattedLine)
-
-		// Increase indent level for opening braces
-		if f.isOpeningBrace(trimmedLine) {
-			indentLevel++
-		}
-	}
-
-	// Apply additional formatting rules
-	formatted := strings.Join(formattedLines, "\n")
-	formatted = f.normalizeSpacing(formatted)
-	formatted = f.formatComments(formatted)
-
-	return formatted
-}
 
 // getIndentString returns the indentation string based on formatting options
 func (f *FormattingProvider) getIndentString(options protocol.FormattingOptions) string {
@@ -127,23 +88,6 @@ func (f *FormattingProvider) isClosingBrace(line string) bool {
 	return line == "}" || strings.HasPrefix(line, "}")
 }
 
-// formatComments ensures proper spacing around comments
-func (f *FormattingProvider) formatComments(content string) string {
-	lines := strings.Split(content, "\n")
-
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "//") {
-			// Ensure single space after //
-			comment := strings.TrimPrefix(trimmed, "//")
-			comment = strings.TrimLeft(comment, " ")
-			indent := strings.Repeat(" ", len(line)-len(strings.TrimLeft(line, " \t")))
-			lines[i] = indent + "// " + comment
-		}
-	}
-
-	return strings.Join(lines, "\n")
-}
 
 // formatDocumentConservatively applies proper indentation and basic spacing normalization
 func (f *FormattingProvider) formatDocumentConservatively(source []byte, options protocol.FormattingOptions) string {

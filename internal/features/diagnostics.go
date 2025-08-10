@@ -245,48 +245,6 @@ func (d *DiagnosticsProvider) determineFieldListContext(fieldList *tree_sitter.N
 	return "parameter list"
 }
 
-// validateFieldList validates field IDs in a field list (parameters, throws, etc.)
-func (d *DiagnosticsProvider) validateFieldList(doc *document.Document, parentNode *tree_sitter.Node, listType string) []protocol.Diagnostic {
-	diagnostics := make([]protocol.Diagnostic, 0)
-	seenFieldIds := make(map[int]*tree_sitter.Node)
-
-	// Find all field lists of the specified type
-	d.walkNodes(parentNode, func(node *tree_sitter.Node) {
-		if node.Kind() == listType {
-			childCount := node.ChildCount()
-			for i := uint(0); i < childCount; i++ {
-				child := node.Child(i)
-				if child.Kind() == "field" {
-					fieldId, fieldIdNode := d.extractFieldId(child, doc.Content)
-					if fieldId == 0 {
-						continue
-					}
-
-					if existingNode, exists := seenFieldIds[fieldId]; exists {
-						diagnostic := protocol.Diagnostic{
-							Range:    d.nodeToRange(fieldIdNode, doc.Content),
-							Severity: &[]protocol.DiagnosticSeverity{protocol.DiagnosticSeverityError}[0],
-							Source:   &[]string{"frugal-ls"}[0],
-							Message:  fmt.Sprintf("Duplicate field ID %d in parameter list", fieldId),
-							RelatedInformation: []protocol.DiagnosticRelatedInformation{{
-								Location: protocol.Location{
-									URI:   doc.URI,
-									Range: d.nodeToRange(existingNode, doc.Content),
-								},
-								Message: fmt.Sprintf("Field ID %d first used here", fieldId),
-							}},
-						}
-						diagnostics = append(diagnostics, diagnostic)
-					} else {
-						seenFieldIds[fieldId] = fieldIdNode
-					}
-				}
-			}
-		}
-	})
-
-	return diagnostics
-}
 
 // validateSingleFieldList validates field IDs within a single field list
 func (d *DiagnosticsProvider) validateSingleFieldList(doc *document.Document, fieldListNode *tree_sitter.Node, contextName string) []protocol.Diagnostic {
@@ -368,7 +326,7 @@ func (d *DiagnosticsProvider) checkNamingConventions(doc *document.Document, roo
 				Range:    d.nodeToRange(node, doc.Content),
 				Severity: &severity,
 				Source:   &[]string{"frugal-ls"}[0],
-				Message:  fmt.Sprintf("%s '%s' should follow %s naming convention", strings.Title(defType), name, expectedPattern),
+				Message:  fmt.Sprintf("%s '%s' should follow %s naming convention", strings.ToUpper(defType[:1])+defType[1:], name, expectedPattern),
 			}
 			diagnostics = append(diagnostics, diagnostic)
 		}

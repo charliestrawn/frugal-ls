@@ -127,34 +127,6 @@ func TestDiagnosticsInvalidFieldId(t *testing.T) {
 	}
 }
 
-func testDiagnosticsZeroFieldId(t *testing.T) { // Disabled - tree-sitter parsing issue
-	provider := NewDiagnosticsProvider()
-
-	content := `struct User {
-    0: i64 id
-}`
-
-	doc := createTestDocumentForDiagnostics(t, "file:///test.frugal", content)
-	defer doc.ParseResult.Close()
-
-	diagnostics := provider.ProvideDiagnostics(doc)
-
-	// Should have diagnostic for invalid field ID (0)
-	found := false
-	for _, diagnostic := range diagnostics {
-		if strings.Contains(diagnostic.Message, "Field ID must be positive, got 0") {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		t.Error("Expected diagnostic for zero field ID")
-		for i, diag := range diagnostics {
-			t.Errorf("Diagnostic %d: %s", i, diag.Message)
-		}
-	}
-}
 
 func TestDiagnosticsMethodParameterFieldIds(t *testing.T) {
 	provider := NewDiagnosticsProvider()

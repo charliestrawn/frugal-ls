@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"frugal-ls/internal/document"
+
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 

@@ -15,7 +15,9 @@ import (
 )
 
 const (
-	LanguageServerName    = "frugal-ls"
+	// LanguageServerName is the identifier for the Frugal language server
+	LanguageServerName = "frugal-ls"
+	// LanguageServerVersion is the current version of the Frugal language server
 	LanguageServerVersion = "0.1.0"
 )
 

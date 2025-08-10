@@ -371,8 +371,8 @@ func TestHoverRange(t *testing.T) {
 	if hover.Range == nil {
 		t.Error("Expected hover to have a range")
 	} else {
-		// Range should be reasonable (not negative, within document bounds)
-		if hover.Range.Start.Line < 0 || hover.Range.End.Line < hover.Range.Start.Line {
+		// Range should be reasonable (within document bounds)
+		if hover.Range.End.Line < hover.Range.Start.Line {
 			t.Error("Hover range should be valid")
 		}
 	}

@@ -10,6 +10,7 @@ import (
 	"frugal-ls/internal/lsp"
 	"frugal-ls/internal/parser"
 	"frugal-ls/pkg/ast"
+
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 )

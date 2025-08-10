@@ -831,18 +831,6 @@ func (c *CodeActionProvider) generateUpdatedMethodSignature(functionNode *tree_s
 	return signature
 }
 
-// isInThrowsClause checks if a field node is part of a throws clause
-func (c *CodeActionProvider) isInThrowsClause(fieldNode *tree_sitter.Node) bool {
-	// Walk up the parent chain to see if we're in a throws context
-	current := fieldNode.Parent() // field_list
-	if current != nil {
-		current = current.Parent() // should be throws_clause or function parameter list
-		if current != nil && (current.Kind() == "throws_clause" || current.Kind() == "exception_spec") {
-			return true
-		}
-	}
-	return false
-}
 
 // extractReturnType extracts the return type from a function definition
 func (c *CodeActionProvider) extractReturnType(functionNode *tree_sitter.Node, source []byte) string {

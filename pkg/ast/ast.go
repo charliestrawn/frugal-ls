@@ -11,18 +11,31 @@ import (
 type NodeType string
 
 const (
-	NodeTypeService   NodeType = "service"
-	NodeTypeScope     NodeType = "scope"
-	NodeTypeStruct    NodeType = "struct"
-	NodeTypeEnum      NodeType = "enum"
-	NodeTypeConst     NodeType = "const"
-	NodeTypeTypedef   NodeType = "typedef"
+	// NodeTypeService represents a service definition node
+	NodeTypeService NodeType = "service"
+	// NodeTypeScope represents a scope definition node
+	NodeTypeScope NodeType = "scope"
+	// NodeTypeStruct represents a struct definition node
+	NodeTypeStruct NodeType = "struct"
+	// NodeTypeEnum represents an enum definition node
+	NodeTypeEnum NodeType = "enum"
+	// NodeTypeConst represents a constant definition node
+	NodeTypeConst NodeType = "const"
+	// NodeTypeTypedef represents a typedef definition node
+	NodeTypeTypedef NodeType = "typedef"
+	// NodeTypeException represents an exception definition node
 	NodeTypeException NodeType = "exception"
-	NodeTypeInclude   NodeType = "include"
+	// NodeTypeInclude represents an include directive node
+	NodeTypeInclude NodeType = "include"
+	// NodeTypeNamespace represents a namespace declaration node
 	NodeTypeNamespace NodeType = "namespace"
-	NodeTypeMethod    NodeType = "method"
-	NodeTypeField     NodeType = "field"
-	NodeTypeEvent     NodeType = "event"
+	// NodeTypeMethod represents a method definition node
+	NodeTypeMethod NodeType = "method"
+	// NodeTypeField represents a field definition node
+	NodeTypeField NodeType = "field"
+	// NodeTypeEvent represents an event definition node
+	NodeTypeEvent NodeType = "event"
+	// NodeTypeEnumValue represents an enum value definition node
 	NodeTypeEnumValue NodeType = "enum_value"
 )
 

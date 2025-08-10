@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	protocol "github.com/tliron/glsp/protocol_3_16"
-	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 
 	"frugal-ls/internal/document"
 	"frugal-ls/pkg/ast"
@@ -81,12 +80,19 @@ func (c *CompletionProvider) ProvideCompletion(doc *document.Document, position 
 type CompletionContext int
 
 const (
+	// CompletionContextTopLevel indicates completion at the top level of a Frugal file
 	CompletionContextTopLevel CompletionContext = iota
+	// CompletionContextService indicates completion within a service definition
 	CompletionContextService
+	// CompletionContextScope indicates completion within a scope definition
 	CompletionContextScope
+	// CompletionContextStruct indicates completion within a struct definition
 	CompletionContextStruct
+	// CompletionContextEnum indicates completion within an enum definition
 	CompletionContextEnum
+	// CompletionContextType indicates completion in a type context
 	CompletionContextType
+	// CompletionContextGeneral indicates general completion context
 	CompletionContextGeneral
 )
 
@@ -391,26 +397,3 @@ func (c *CompletionProvider) getSymbolCompletions(doc *document.Document, positi
 	return completions
 }
 
-// findNodeContainingByte finds the deepest node containing the given byte offset
-func findNodeContainingByte(node *tree_sitter.Node, byteOffset uint) *tree_sitter.Node {
-	if node == nil {
-		return nil
-	}
-
-	// Check if byte offset is within this node's range
-	if byteOffset < node.StartByte() || byteOffset > node.EndByte() {
-		return nil
-	}
-
-	// Check children for a more specific match
-	childCount := node.ChildCount()
-	for i := uint(0); i < childCount; i++ {
-		child := node.Child(i)
-		if childNode := findNodeContainingByte(child, byteOffset); childNode != nil {
-			return childNode
-		}
-	}
-
-	// No child contains the position, so this node is the deepest match
-	return node
-}

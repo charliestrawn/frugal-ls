@@ -121,10 +121,10 @@ service UserService {
 
 			// Verify all references have valid ranges
 			for i, ref := range references {
-				if ref.Range.Start.Line < 0 || ref.Range.End.Line < 0 {
+				if ref.Range.End.Line < ref.Range.Start.Line {
 					t.Errorf("Reference %d has invalid line numbers: %+v", i, ref.Range)
 				}
-				if ref.Range.Start.Character < 0 || ref.Range.End.Character < 0 {
+				if ref.Range.End.Character < ref.Range.Start.Character && ref.Range.End.Line == ref.Range.Start.Line {
 					t.Errorf("Reference %d has invalid character positions: %+v", i, ref.Range)
 				}
 				if ref.URI == "" {
@@ -290,10 +290,10 @@ service UserService {
 
 			if symbolRange != nil {
 				// Verify range is valid
-				if symbolRange.Start.Line < 0 || symbolRange.End.Line < 0 {
+				if symbolRange.End.Line < symbolRange.Start.Line {
 					t.Errorf("invalid line numbers in range: %+v", symbolRange)
 				}
-				if symbolRange.Start.Character < 0 || symbolRange.End.Character < 0 {
+				if symbolRange.End.Character < symbolRange.Start.Character && symbolRange.End.Line == symbolRange.Start.Line {
 					t.Errorf("invalid character positions in range: %+v", symbolRange)
 				}
 			}
@@ -338,10 +338,10 @@ service UserService {
 
 	// Verify all references have valid positions
 	for i, ref := range references {
-		if ref.Start.Line < 0 || ref.End.Line < 0 {
+		if ref.End.Line < ref.Start.Line {
 			t.Errorf("Reference %d has invalid line numbers: %+v", i, ref)
 		}
-		if ref.Start.Character < 0 || ref.End.Character < 0 {
+		if ref.End.Character < ref.Start.Character && ref.End.Line == ref.Start.Line {
 			t.Errorf("Reference %d has invalid character positions: %+v", i, ref)
 		}
 	}
