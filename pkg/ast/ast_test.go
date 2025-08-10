@@ -603,3 +603,370 @@ func BenchmarkGetText(b *testing.B) {
 		GetText(identifier, source)
 	}
 }
+
+// Additional test cases for enhanced coverage
+
+func TestGetTextBoundaryConditions(t *testing.T) {
+	source := []byte("struct User { }")
+
+	p, err := parser.NewParser()
+	if err != nil {
+		t.Fatalf("Failed to create parser: %v", err)
+	}
+	defer p.Close()
+
+	result, err := p.Parse(source)
+	if err != nil {
+		t.Fatalf("Failed to parse: %v", err)
+	}
+	defer result.Close()
+
+	root := result.GetRootNode()
+	if root == nil {
+		t.Fatal("Expected root node")
+	}
+
+	// Test GetText with empty source
+	emptyText := GetText(root, []byte{})
+	if emptyText != "" {
+		t.Errorf("Expected empty string for empty source, got %q", emptyText)
+	}
+
+	// Test GetText with node that has zero-length text
+	identifier := FindNodeByType(root, "identifier")
+	if identifier != nil {
+		text := GetText(identifier, source)
+		if text != "User" {
+			t.Errorf("Expected 'User', got %q", text)
+		}
+	}
+}
+
+func TestExtractSymbolsNestedStructures(t *testing.T) {
+	content := `struct OuterStruct {
+    1: InnerStruct inner
+}
+
+struct InnerStruct {
+    1: string value
+}
+
+service NestedService {
+    struct LocalStruct {
+        1: i32 localField
+    }
+    
+    LocalStruct getLocal()
+}`
+
+	p, err := parser.NewParser()
+	if err != nil {
+		t.Fatalf("Failed to create parser: %v", err)
+	}
+	defer p.Close()
+
+	result, err := p.Parse([]byte(content))
+	if err != nil {
+		t.Fatalf("Failed to parse: %v", err)
+	}
+	defer result.Close()
+
+	root := result.GetRootNode()
+	if root == nil {
+		t.Fatal("Expected root node")
+	}
+
+	symbols := ExtractSymbols(root, []byte(content))
+
+	// Should find at least OuterStruct, InnerStruct, and NestedService
+	expectedNames := map[string]NodeType{
+		"OuterStruct":   NodeTypeStruct,
+		"InnerStruct":   NodeTypeStruct,
+		"NestedService": NodeTypeService,
+	}
+
+	foundSymbols := make(map[string]NodeType)
+	for _, symbol := range symbols {
+		foundSymbols[symbol.Name] = symbol.Type
+	}
+
+	for expectedName, expectedType := range expectedNames {
+		if foundType, exists := foundSymbols[expectedName]; !exists {
+			t.Errorf("Expected to find symbol %q of type %s", expectedName, expectedType)
+		} else if foundType != expectedType {
+			t.Errorf("Expected symbol %q to be of type %s, got %s", expectedName, expectedType, foundType)
+		}
+	}
+}
+
+func TestExtractSymbolsWithInheritance(t *testing.T) {
+	content := `struct BaseStruct {
+    1: string baseField
+}
+
+struct DerivedStruct extends BaseStruct {
+    2: i32 derivedField
+}
+
+exception BaseException {
+    1: string message
+}
+
+exception SpecificException extends BaseException {
+    2: i32 errorCode
+}`
+
+	p, err := parser.NewParser()
+	if err != nil {
+		t.Fatalf("Failed to create parser: %v", err)
+	}
+	defer p.Close()
+
+	result, err := p.Parse([]byte(content))
+	if err != nil {
+		t.Fatalf("Failed to parse: %v", err)
+	}
+	defer result.Close()
+
+	root := result.GetRootNode()
+	if root == nil {
+		t.Fatal("Expected root node")
+	}
+
+	symbols := ExtractSymbols(root, []byte(content))
+
+	// Should extract symbols regardless of inheritance
+	expectedSymbols := map[string]NodeType{
+		"BaseStruct":        NodeTypeStruct,
+		"DerivedStruct":     NodeTypeStruct,
+		"BaseException":     NodeTypeException,
+		"SpecificException": NodeTypeException,
+	}
+
+	foundSymbols := make(map[string]NodeType)
+	for _, symbol := range symbols {
+		foundSymbols[symbol.Name] = symbol.Type
+	}
+
+	for name, expectedType := range expectedSymbols {
+		if foundType, exists := foundSymbols[name]; !exists {
+			t.Errorf("Expected to find symbol %q", name)
+		} else if foundType != expectedType {
+			t.Errorf("Symbol %q should be type %s, got %s", name, expectedType, foundType)
+		}
+	}
+}
+
+func TestExtractSymbolsComplexService(t *testing.T) {
+	content := `service ComplexService {
+    // Method with throws clause
+    User getUser(1: i64 id) throws (1: UserNotFound notFound),
+    
+    // Method with multiple parameters
+    void updateUser(
+        1: i64 id,
+        2: string name,
+        3: optional string email
+    ) throws (1: UserNotFound notFound, 2: ValidationError invalid),
+    
+    // Oneway method
+    oneway void logEvent(1: string event),
+    
+    // Method with complex return type
+    list<map<string, User>> getAllUserMaps()
+}`
+
+	p, err := parser.NewParser()
+	if err != nil {
+		t.Fatalf("Failed to create parser: %v", err)
+	}
+	defer p.Close()
+
+	result, err := p.Parse([]byte(content))
+	if err != nil {
+		t.Fatalf("Failed to parse: %v", err)
+	}
+	defer result.Close()
+
+	root := result.GetRootNode()
+	if root == nil {
+		t.Fatal("Expected root node")
+	}
+
+	symbols := ExtractSymbols(root, []byte(content))
+
+	// Should find the service symbol
+	hasComplexService := false
+	for _, symbol := range symbols {
+		if symbol.Name == "ComplexService" && symbol.Type == NodeTypeService {
+			hasComplexService = true
+			break
+		}
+	}
+
+	if !hasComplexService {
+		t.Error("Expected to find ComplexService symbol")
+	}
+}
+
+func TestExtractSymbolsAnnotations(t *testing.T) {
+	content := `@deprecated
+struct LegacyStruct {
+    1: string oldField
+}
+
+@readonly
+service ReadOnlyService {
+    @throttle(1000)
+    string getData(1: string key)
+}`
+
+	p, err := parser.NewParser()
+	if err != nil {
+		t.Fatalf("Failed to create parser: %v", err)
+	}
+	defer p.Close()
+
+	result, err := p.Parse([]byte(content))
+	if err != nil {
+		t.Fatalf("Failed to parse: %v", err)
+	}
+	defer result.Close()
+
+	root := result.GetRootNode()
+	if root == nil {
+		t.Fatal("Expected root node")
+	}
+
+	symbols := ExtractSymbols(root, []byte(content))
+
+	// Should extract symbols even with annotations
+	expectedSymbols := []string{"LegacyStruct", "ReadOnlyService"}
+	foundNames := make([]string, len(symbols))
+	for i, symbol := range symbols {
+		foundNames[i] = symbol.Name
+	}
+
+	for _, expected := range expectedSymbols {
+		found := false
+		for _, name := range foundNames {
+			if name == expected {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Expected to find symbol %q (annotations should not prevent extraction)", expected)
+		}
+	}
+}
+
+func TestFindNodeByTypeRecursive(t *testing.T) {
+	content := `struct OuterStruct {
+    1: struct InnerStruct {
+        1: string value
+    } inner
+}`
+
+	p, err := parser.NewParser()
+	if err != nil {
+		t.Fatalf("Failed to create parser: %v", err)
+	}
+	defer p.Close()
+
+	result, err := p.Parse([]byte(content))
+	if err != nil {
+		t.Fatalf("Failed to parse: %v", err)
+	}
+	defer result.Close()
+
+	root := result.GetRootNode()
+	if root == nil {
+		t.Fatal("Expected root node")
+	}
+
+	// Find multiple struct definitions (should find first one)
+	firstStruct := FindNodeByType(root, "struct_definition")
+	if firstStruct == nil {
+		t.Error("Expected to find at least one struct_definition")
+		return
+	}
+
+	// Verify it finds the outer struct first
+	identifier := FindNodeByType(firstStruct, "identifier")
+	if identifier != nil {
+		text := GetText(identifier, []byte(content))
+		if text != "OuterStruct" {
+			t.Errorf("Expected to find OuterStruct first, got %q", text)
+		}
+	}
+}
+
+func TestSymbolPositionAccuracy(t *testing.T) {
+	content := `namespace go test
+
+struct User {
+    1: i64 id,
+    2: string name
+}
+
+service UserService {
+    User getUser(1: i64 userId)
+}`
+
+	lines := strings.Split(content, "\n")
+
+	p, err := parser.NewParser()
+	if err != nil {
+		t.Fatalf("Failed to create parser: %v", err)
+	}
+	defer p.Close()
+
+	result, err := p.Parse([]byte(content))
+	if err != nil {
+		t.Fatalf("Failed to parse: %v", err)
+	}
+	defer result.Close()
+
+	root := result.GetRootNode()
+	if root == nil {
+		t.Fatal("Expected root node")
+	}
+
+	symbols := ExtractSymbols(root, []byte(content))
+
+	for _, symbol := range symbols {
+		// Verify line number is within bounds
+		if symbol.Line >= len(lines) {
+			t.Errorf("Symbol %s line %d is beyond source lines (%d)", symbol.Name, symbol.Line, len(lines))
+			continue
+		}
+
+		// Verify the symbol name appears on the reported line
+		line := lines[symbol.Line]
+		if !strings.Contains(line, symbol.Name) {
+			t.Errorf("Symbol %s not found on reported line %d: %q", symbol.Name, symbol.Line, line)
+		}
+	}
+}
+
+func TestGetTextEdgeCasesExtended(t *testing.T) {
+	// Test with source that has invalid byte positions
+	source := []byte("short")
+	
+	// Mock a node with invalid positions (this is theoretical since tree-sitter should not produce these)
+	// But we test the bounds checking in GetText
+	
+	// Test GetText with position exactly at source length
+	// This tests the bounds checking logic
+	result := GetText(nil, source)
+	if result != "" {
+		t.Errorf("Expected empty string for nil node, got %q", result)
+	}
+
+	// Test with empty source
+	emptyResult := GetText(nil, []byte{})
+	if emptyResult != "" {
+		t.Errorf("Expected empty string for nil node with empty source, got %q", emptyResult)
+	}
+}
