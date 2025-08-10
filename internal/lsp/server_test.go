@@ -3,8 +3,8 @@ package lsp
 import (
 	"testing"
 
-	protocol "github.com/tliron/glsp/protocol_3_16"
 	"frugal-ls/internal/document"
+	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 func TestNewServer(t *testing.T) {
@@ -60,12 +60,12 @@ func TestServerInitialization(t *testing.T) {
 
 	// Test server capabilities directly
 	caps := server.getServerCapabilities()
-	
+
 	if caps.CompletionProvider == nil {
 		t.Error("Completion provider capability should be set")
 	}
 	if caps.HoverProvider == nil {
-		t.Error("Hover provider capability should be set")  
+		t.Error("Hover provider capability should be set")
 	}
 	if caps.DefinitionProvider == nil {
 		t.Error("Definition provider capability should be set")
@@ -223,7 +223,7 @@ service UserService {
 	if err != nil {
 		t.Errorf("References failed: %v", err)
 	}
-	
+
 	// Should find at least the declaration and usage
 	if len(references) < 2 {
 		t.Errorf("Expected at least 2 references, got %d", len(references))

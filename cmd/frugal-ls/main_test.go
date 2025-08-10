@@ -46,46 +46,46 @@ func TestPrintUsage(t *testing.T) {
 // Test command line argument processing
 func TestCommandLineProcessing(t *testing.T) {
 	testCases := []struct {
-		name string
-		args []string
-		expectHelp bool
+		name          string
+		args          []string
+		expectHelp    bool
 		expectVersion bool
-		expectTest bool
-		expectLSP bool
+		expectTest    bool
+		expectLSP     bool
 	}{
 		{
-			name: "help flag",
-			args: []string{"frugal-ls", "--help"},
+			name:       "help flag",
+			args:       []string{"frugal-ls", "--help"},
 			expectHelp: true,
 		},
 		{
-			name: "short help flag",
-			args: []string{"frugal-ls", "-h"},
+			name:       "short help flag",
+			args:       []string{"frugal-ls", "-h"},
 			expectHelp: true,
 		},
 		{
-			name: "version flag",
-			args: []string{"frugal-ls", "--version"},
+			name:          "version flag",
+			args:          []string{"frugal-ls", "--version"},
 			expectVersion: true,
 		},
 		{
-			name: "short version flag", 
-			args: []string{"frugal-ls", "-v"},
+			name:          "short version flag",
+			args:          []string{"frugal-ls", "-v"},
 			expectVersion: true,
 		},
 		{
-			name: "test flag",
-			args: []string{"frugal-ls", "--test"},
+			name:       "test flag",
+			args:       []string{"frugal-ls", "--test"},
 			expectTest: true,
 		},
 		{
-			name: "no arguments",
-			args: []string{"frugal-ls"},
+			name:      "no arguments",
+			args:      []string{"frugal-ls"},
 			expectLSP: true,
 		},
 		{
-			name: "unknown argument",
-			args: []string{"frugal-ls", "--unknown"},
+			name:      "unknown argument",
+			args:      []string{"frugal-ls", "--unknown"},
 			expectLSP: true,
 		},
 	}
@@ -94,28 +94,28 @@ func TestCommandLineProcessing(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// We can't easily test the actual execution since it would run the LSP server
 			// But we can verify the logic by checking os.Args parsing
-			
+
 			// Save original args
 			origArgs := os.Args
 			defer func() { os.Args = origArgs }()
-			
+
 			// Set test args
 			os.Args = tc.args
-			
+
 			// For LSP mode, we just verify it would try to run (can't test actual LSP server easily)
 			if tc.expectLSP {
 				// These cases would run the LSP server, which we can't easily test in unit tests
 				t.Log("LSP server mode - would need integration test")
 				return
 			}
-			
+
 			// For other modes, we can capture output
 			if tc.expectHelp {
 				// Capture stdout to test help output
 				oldStdout := os.Stdout
 				r, w, _ := os.Pipe()
 				os.Stdout = w
-				
+
 				// This will call main() but should exit early for help
 				defer func() {
 					if r := recover(); r != nil {
@@ -123,16 +123,16 @@ func TestCommandLineProcessing(t *testing.T) {
 						t.Log("Help mode attempted to exit")
 					}
 				}()
-				
+
 				printUsage() // Test the help function directly instead
-				
+
 				w.Close()
 				os.Stdout = oldStdout
-				
+
 				var buf bytes.Buffer
 				buf.ReadFrom(r)
 				output := buf.String()
-				
+
 				if !strings.Contains(output, "Usage:") {
 					t.Error("Help should show usage")
 				}

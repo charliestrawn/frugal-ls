@@ -90,7 +90,7 @@ func extractSymbolsRecursive(node *tree_sitter.Node, source []byte, symbols *[]S
 	}
 
 	nodeType := node.Kind()
-	
+
 	// Check if this node represents a symbol we care about
 	switch nodeType {
 	case "service_definition":
@@ -283,7 +283,7 @@ func PrintTree(node *tree_sitter.Node, source []byte, indent int) {
 		nodeText = nodeText[:50] + "..."
 	}
 	nodeText = strings.ReplaceAll(nodeText, "\n", "\\n")
-	
+
 	fmt.Printf("%s%s: %q\n", indentStr, node.Kind(), nodeText)
 
 	childCount := node.ChildCount()

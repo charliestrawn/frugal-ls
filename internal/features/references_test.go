@@ -15,11 +15,11 @@ func TestReferencesProvider(t *testing.T) {
 	provider := NewReferencesProvider()
 
 	tests := []struct {
-		name                string
-		content             string
-		position            protocol.Position
-		includeDeclaration  bool
-		expectedRefCount    int
+		name               string
+		content            string
+		position           protocol.Position
+		includeDeclaration bool
+		expectedRefCount   int
 	}{
 		{
 			name: "find struct references",
@@ -33,9 +33,9 @@ service UserService {
 }
 
 const User DEFAULT_USER = {};`,
-			position: protocol.Position{Line: 0, Character: 7}, // "User" in struct declaration
+			position:           protocol.Position{Line: 0, Character: 7}, // "User" in struct declaration
 			includeDeclaration: true,
-			expectedRefCount: 4, // Declaration + 3 references
+			expectedRefCount:   4, // Declaration + 3 references
 		},
 		{
 			name: "find field references",
@@ -49,9 +49,9 @@ service UserService {
         return user.name;
     }
 }`,
-			position: protocol.Position{Line: 1, Character: 14}, // "name" in field declaration
+			position:           protocol.Position{Line: 1, Character: 14}, // "name" in field declaration
 			includeDeclaration: true,
-			expectedRefCount: 1, // Only declaration (user.name might not parse as identifier)
+			expectedRefCount:   1, // Only declaration (user.name might not parse as identifier)
 		},
 		{
 			name: "find service method references",
@@ -64,9 +64,9 @@ service AdminService extends UserService {
         this.getUser(123);
     }
 }`,
-			position: protocol.Position{Line: 1, Character: 9}, // "getUser" in method declaration
+			position:           protocol.Position{Line: 1, Character: 9}, // "getUser" in method declaration
 			includeDeclaration: true,
-			expectedRefCount: 1, // Only declaration (method calls might not parse as simple identifiers)
+			expectedRefCount:   1, // Only declaration (method calls might not parse as simple identifiers)
 		},
 		{
 			name: "no references found",
@@ -77,9 +77,9 @@ service AdminService extends UserService {
 struct Product {
     1: string title
 }`,
-			position: protocol.Position{Line: 4, Character: 7}, // "Product" 
+			position:           protocol.Position{Line: 4, Character: 7}, // "Product"
 			includeDeclaration: true,
-			expectedRefCount: 1, // Only declaration
+			expectedRefCount:   1, // Only declaration
 		},
 		{
 			name: "exclude declaration",
@@ -90,9 +90,9 @@ struct Product {
 service UserService {
     User getUser(1: i64 id)
 }`,
-			position: protocol.Position{Line: 0, Character: 7}, // "User" in struct declaration
+			position:           protocol.Position{Line: 0, Character: 7}, // "User" in struct declaration
 			includeDeclaration: false,
-			expectedRefCount: 1, // Only the reference in service method
+			expectedRefCount:   1, // Only the reference in service method
 		},
 	}
 
@@ -183,7 +183,7 @@ struct UserRequest {
 	references, err := provider.ProvideReferences(
 		commonDoc,
 		protocol.Position{Line: 0, Character: 7}, // "User" in struct declaration
-		true, // include declaration
+		true,                                     // include declaration
 		allDocuments,
 	)
 
@@ -326,7 +326,7 @@ service UserService {
 	// Find all references to "User" in the document
 	references := provider.findReferencesInDocument(doc, "User")
 
-	// Should find: struct declaration, field type in UserProfile, 
+	// Should find: struct declaration, field type in UserProfile,
 	// return type in getUser, parameter type in getUserProfile
 	expectedRefCount := 4
 	if len(references) != expectedRefCount {
@@ -361,7 +361,7 @@ func TestNodeToRange(t *testing.T) {
 	}
 
 	root := doc.ParseResult.Tree.RootNode()
-	
+
 	// Find the first identifier (should be "User")
 	var identifierNode *tree_sitter.Node
 	provider.walkTreeForIdentifier(root, &identifierNode)
@@ -407,7 +407,7 @@ func (p *ReferencesProvider) walkTreeForIdentifier(node *tree_sitter.Node, resul
 func createTestDocument(uri, content string) (*document.Document, error) {
 	// Extract path from URI for proper validation
 	path := strings.TrimPrefix(uri, "file://")
-	
+
 	doc := &document.Document{
 		URI:     uri,
 		Path:    path,

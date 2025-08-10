@@ -33,8 +33,8 @@ func TestScopeDeclarations(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "empty scope",
-			source: `scope EmptyScope prefix "empty" {}`,
+			name:    "empty scope",
+			source:  `scope EmptyScope prefix "empty" {}`,
 			wantErr: false,
 		},
 		{
@@ -471,38 +471,38 @@ func TestNamespaceAndIncludes(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "include directive",
-			source: `include "common.frugal"`,
+			name:    "include directive",
+			source:  `include "common.frugal"`,
 			wantErr: false,
 		},
 		{
-			name: "include with single quotes",
-			source: `include 'shared.frugal'`,
+			name:    "include with single quotes",
+			source:  `include 'shared.frugal'`,
 			wantErr: false,
 		},
 		{
-			name: "namespace go",
-			source: `namespace go example.service`,
+			name:    "namespace go",
+			source:  `namespace go example.service`,
 			wantErr: false,
 		},
 		{
-			name: "namespace java",
-			source: `namespace java com.example`,
+			name:    "namespace java",
+			source:  `namespace java com.example`,
 			wantErr: false,
 		},
 		{
-			name: "namespace python",
-			source: `namespace python example.service`,
+			name:    "namespace python",
+			source:  `namespace python example.service`,
 			wantErr: false,
 		},
 		{
-			name: "namespace cpp",
-			source: `namespace cpp example`,
+			name:    "namespace cpp",
+			source:  `namespace cpp example`,
 			wantErr: false,
 		},
 		{
-			name: "namespace wildcard",
-			source: `namespace * example`,
+			name:    "namespace wildcard",
+			source:  `namespace * example`,
 			wantErr: false,
 		},
 		{

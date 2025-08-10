@@ -67,7 +67,7 @@ func (p *ReferencesProvider) ProvideReferences(doc *document.Document, position 
 // getSymbolAtPosition finds the symbol (identifier) at the given position
 func (p *ReferencesProvider) getSymbolAtPosition(doc *document.Document, position protocol.Position) (string, *protocol.Range) {
 	root := doc.ParseResult.Tree.RootNode()
-	
+
 	// Convert position to byte offset
 	lines := strings.Split(string(doc.Content), "\n")
 	if int(position.Line) >= len(lines) {
@@ -99,10 +99,10 @@ func (p *ReferencesProvider) getSymbolAtPosition(doc *document.Document, positio
 
 	// Extract the symbol text
 	symbol := string(doc.Content[identifierNode.StartByte():identifierNode.EndByte()])
-	
+
 	// Convert node range back to LSP range
 	symbolRange := p.nodeToRange(identifierNode, string(doc.Content))
-	
+
 	return symbol, symbolRange
 }
 
@@ -158,10 +158,10 @@ func (p *ReferencesProvider) isSymbolNode(node *tree_sitter.Node) bool {
 // findReferencesInDocument finds all references to the given symbol in a document
 func (p *ReferencesProvider) findReferencesInDocument(doc *document.Document, symbol string) []protocol.Range {
 	var references []protocol.Range
-	
+
 	root := doc.ParseResult.Tree.RootNode()
 	p.walkTreeForReferences(root, symbol, string(doc.Content), &references)
-	
+
 	return references
 }
 

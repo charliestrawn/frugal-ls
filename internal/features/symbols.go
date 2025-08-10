@@ -24,33 +24,33 @@ func (d *DocumentSymbolProvider) ProvideDocumentSymbols(doc *document.Document) 
 	if len(symbols) == 0 {
 		return nil, nil
 	}
-	
+
 	var documentSymbols []protocol.DocumentSymbol
-	
+
 	for _, symbol := range symbols {
 		docSymbol := d.convertToDocumentSymbol(symbol, doc)
 		documentSymbols = append(documentSymbols, docSymbol)
 	}
-	
+
 	return documentSymbols, nil
 }
 
 // ProvideWorkspaceSymbols provides symbols across all documents in the workspace
 func (d *DocumentSymbolProvider) ProvideWorkspaceSymbols(query string, documents map[string]*document.Document) ([]protocol.SymbolInformation, error) {
 	var workspaceSymbols []protocol.SymbolInformation
-	
+
 	for uri, doc := range documents {
 		if !doc.IsValidFrugalFile() {
 			continue
 		}
-		
+
 		symbols := doc.GetSymbols()
 		for _, symbol := range symbols {
 			// Filter symbols based on query if provided
 			if query != "" && !containsIgnoreCase(symbol.Name, query) {
 				continue
 			}
-			
+
 			workspaceSymbol := protocol.SymbolInformation{
 				Name: symbol.Name,
 				Kind: d.getSymbolKind(symbol.Type),
@@ -68,11 +68,11 @@ func (d *DocumentSymbolProvider) ProvideWorkspaceSymbols(query string, documents
 					},
 				},
 			}
-			
+
 			workspaceSymbols = append(workspaceSymbols, workspaceSymbol)
 		}
 	}
-	
+
 	return workspaceSymbols, nil
 }
 
@@ -88,7 +88,7 @@ func (d *DocumentSymbolProvider) convertToDocumentSymbol(symbol ast.Symbol, doc 
 			Character: uint32(symbol.Column) + uint32(len(symbol.Name)),
 		},
 	}
-	
+
 	// For complex symbols, try to get the full range including the body
 	selectionRange := symbolRange
 	if symbol.Node != nil {
@@ -104,26 +104,26 @@ func (d *DocumentSymbolProvider) convertToDocumentSymbol(symbol ast.Symbol, doc 
 		}
 		symbolRange = fullRange
 	}
-	
+
 	docSymbol := protocol.DocumentSymbol{
 		Name:           symbol.Name,
 		Kind:           d.getSymbolKind(symbol.Type),
 		Range:          symbolRange,
 		SelectionRange: selectionRange,
 	}
-	
+
 	// Add detail information
 	detail := d.getSymbolDetail(symbol, doc)
 	if detail != "" {
 		docSymbol.Detail = &detail
 	}
-	
+
 	// Add children for structured symbols
 	children := d.getSymbolChildren(symbol, doc)
 	if len(children) > 0 {
 		docSymbol.Children = children
 	}
-	
+
 	return docSymbol
 }
 
@@ -182,11 +182,11 @@ func (d *DocumentSymbolProvider) getSymbolDetail(symbol ast.Symbol, doc *documen
 // getSymbolChildren extracts child symbols for structured types
 func (d *DocumentSymbolProvider) getSymbolChildren(symbol ast.Symbol, doc *document.Document) []protocol.DocumentSymbol {
 	var children []protocol.DocumentSymbol
-	
+
 	if symbol.Node == nil {
 		return children
 	}
-	
+
 	switch symbol.Type {
 	case ast.NodeTypeService:
 		children = d.extractServiceMethods(symbol.Node, doc)
@@ -197,20 +197,20 @@ func (d *DocumentSymbolProvider) getSymbolChildren(symbol ast.Symbol, doc *docum
 	case ast.NodeTypeEnum:
 		children = d.extractEnumValues(symbol.Node, doc)
 	}
-	
+
 	return children
 }
 
 // extractServiceMethods extracts method symbols from a service
 func (d *DocumentSymbolProvider) extractServiceMethods(serviceNode *tree_sitter.Node, doc *document.Document) []protocol.DocumentSymbol {
 	var methods []protocol.DocumentSymbol
-	
+
 	// Find service body
 	serviceBody := ast.FindNodeByType(serviceNode, "service_body")
 	if serviceBody == nil {
 		return methods
 	}
-	
+
 	// Extract methods from service body
 	childCount := serviceBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
@@ -222,20 +222,20 @@ func (d *DocumentSymbolProvider) extractServiceMethods(serviceNode *tree_sitter.
 			}
 		}
 	}
-	
+
 	return methods
 }
 
 // extractScopeEvents extracts event symbols from a scope
 func (d *DocumentSymbolProvider) extractScopeEvents(scopeNode *tree_sitter.Node, doc *document.Document) []protocol.DocumentSymbol {
 	var events []protocol.DocumentSymbol
-	
+
 	// Find scope body
 	scopeBody := ast.FindNodeByType(scopeNode, "scope_body")
 	if scopeBody == nil {
 		return events
 	}
-	
+
 	// Extract events from scope body
 	childCount := scopeBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
@@ -247,20 +247,20 @@ func (d *DocumentSymbolProvider) extractScopeEvents(scopeNode *tree_sitter.Node,
 			}
 		}
 	}
-	
+
 	return events
 }
 
 // extractStructFields extracts field symbols from a struct
 func (d *DocumentSymbolProvider) extractStructFields(structNode *tree_sitter.Node, doc *document.Document) []protocol.DocumentSymbol {
 	var fields []protocol.DocumentSymbol
-	
+
 	// Find struct body
 	structBody := ast.FindNodeByType(structNode, "struct_body")
 	if structBody == nil {
 		return fields
 	}
-	
+
 	// Extract fields from struct body
 	childCount := structBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
@@ -272,20 +272,20 @@ func (d *DocumentSymbolProvider) extractStructFields(structNode *tree_sitter.Nod
 			}
 		}
 	}
-	
+
 	return fields
 }
 
 // extractEnumValues extracts value symbols from an enum
 func (d *DocumentSymbolProvider) extractEnumValues(enumNode *tree_sitter.Node, doc *document.Document) []protocol.DocumentSymbol {
 	var values []protocol.DocumentSymbol
-	
+
 	// Find enum body
 	enumBody := ast.FindNodeByType(enumNode, "enum_body")
 	if enumBody == nil {
 		return values
 	}
-	
+
 	// Extract values from enum body
 	childCount := enumBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
@@ -297,15 +297,15 @@ func (d *DocumentSymbolProvider) extractEnumValues(enumNode *tree_sitter.Node, d
 			}
 		}
 	}
-	
+
 	return values
 }
 
 // Helper methods to check node types
 func (d *DocumentSymbolProvider) isMethodNode(node *tree_sitter.Node) bool {
 	kind := node.Kind()
-	return kind == "method" || kind == "function" || 
-		   (kind == "identifier" && d.looksLikeMethod(node))
+	return kind == "method" || kind == "function" ||
+		(kind == "identifier" && d.looksLikeMethod(node))
 }
 
 func (d *DocumentSymbolProvider) isEventNode(node *tree_sitter.Node) bool {
@@ -316,7 +316,7 @@ func (d *DocumentSymbolProvider) isEventNode(node *tree_sitter.Node) bool {
 func (d *DocumentSymbolProvider) isFieldNode(node *tree_sitter.Node) bool {
 	kind := node.Kind()
 	return kind == "field" || kind == "struct_field" ||
-		   (kind == "identifier" && d.looksLikeField(node))
+		(kind == "identifier" && d.looksLikeField(node))
 }
 
 func (d *DocumentSymbolProvider) isEnumValueNode(node *tree_sitter.Node) bool {
@@ -331,14 +331,14 @@ func (d *DocumentSymbolProvider) extractMethodSymbol(node *tree_sitter.Node, doc
 	if methodText == "" {
 		return nil
 	}
-	
+
 	// Try to extract method name
 	var methodName string
 	nameNode := ast.FindNodeByType(node, "identifier")
 	if nameNode != nil {
 		methodName = ast.GetText(nameNode, doc.Content)
 	}
-	
+
 	if methodName == "" {
 		// Fallback: try to parse method name from text
 		parts := strings.Fields(strings.TrimSpace(methodText))
@@ -346,11 +346,11 @@ func (d *DocumentSymbolProvider) extractMethodSymbol(node *tree_sitter.Node, doc
 			methodName = parts[0]
 		}
 	}
-	
+
 	if methodName == "" {
 		return nil
 	}
-	
+
 	return &protocol.DocumentSymbol{
 		Name: methodName,
 		Kind: protocol.SymbolKindMethod,
@@ -383,18 +383,18 @@ func (d *DocumentSymbolProvider) extractEventSymbol(node *tree_sitter.Node, doc 
 	if eventText == "" {
 		return nil
 	}
-	
+
 	// Parse event name from "EventName: Type" format
 	parts := strings.Split(strings.TrimSpace(eventText), ":")
 	if len(parts) < 1 {
 		return nil
 	}
-	
+
 	eventName := strings.TrimSpace(parts[0])
 	if eventName == "" {
 		return nil
 	}
-	
+
 	return &protocol.DocumentSymbol{
 		Name: eventName,
 		Kind: protocol.SymbolKindEvent,
@@ -427,7 +427,7 @@ func (d *DocumentSymbolProvider) extractFieldSymbol(node *tree_sitter.Node, doc 
 	if fieldText == "" {
 		return nil
 	}
-	
+
 	// Try to extract field name from various formats
 	// "1: required string name"
 	// "2: optional i32 id"
@@ -436,7 +436,7 @@ func (d *DocumentSymbolProvider) extractFieldSymbol(node *tree_sitter.Node, doc 
 	if nameNode != nil {
 		fieldName = ast.GetText(nameNode, doc.Content)
 	}
-	
+
 	if fieldName == "" {
 		// Fallback: try to parse field name from text
 		parts := strings.Fields(strings.TrimSpace(fieldText))
@@ -444,11 +444,11 @@ func (d *DocumentSymbolProvider) extractFieldSymbol(node *tree_sitter.Node, doc 
 			fieldName = parts[len(parts)-1] // Usually the last part
 		}
 	}
-	
+
 	if fieldName == "" {
 		return nil
 	}
-	
+
 	return &protocol.DocumentSymbol{
 		Name: fieldName,
 		Kind: protocol.SymbolKindField,
@@ -481,14 +481,14 @@ func (d *DocumentSymbolProvider) extractEnumValueSymbol(node *tree_sitter.Node, 
 	if valueText == "" {
 		return nil
 	}
-	
+
 	// Parse enum value from "VALUE = 1" format
 	parts := strings.Split(strings.TrimSpace(valueText), "=")
 	valueName := strings.TrimSpace(parts[0])
 	if valueName == "" {
 		return nil
 	}
-	
+
 	return &protocol.DocumentSymbol{
 		Name: valueName,
 		Kind: protocol.SymbolKindEnumMember,

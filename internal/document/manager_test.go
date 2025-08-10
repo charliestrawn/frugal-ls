@@ -356,18 +356,18 @@ func TestDocumentURIPath(t *testing.T) {
 	defer manager.Close()
 
 	testCases := []struct {
-		name        string
-		uri         string
+		name         string
+		uri          string
 		expectedPath string
 	}{
 		{
-			name:        "unix path",
-			uri:         "file:///home/user/test.frugal",
+			name:         "unix path",
+			uri:          "file:///home/user/test.frugal",
 			expectedPath: "/home/user/test.frugal",
 		},
 		{
-			name:        "relative-like path",
-			uri:         "file:///test.frugal",
+			name:         "relative-like path",
+			uri:          "file:///test.frugal",
 			expectedPath: "/test.frugal",
 		},
 	}
@@ -399,7 +399,7 @@ func TestDocumentNilParseResult(t *testing.T) {
 	// Create a document with no parse result
 	doc := &Document{
 		URI:         "file:///test.frugal",
-		Path:        "/test.frugal", 
+		Path:        "/test.frugal",
 		Content:     []byte("test content"),
 		Version:     1,
 		ParseResult: nil, // No parse result
@@ -409,12 +409,12 @@ func TestDocumentNilParseResult(t *testing.T) {
 	globalDiagnosticsProvider = nil
 
 	diagnostics := doc.GetDiagnostics()
-	
+
 	// Should return empty array, not nil - this is critical for LSP protocol compliance
 	if diagnostics == nil {
 		t.Error("GetDiagnostics should return empty array, not nil - this violates LSP protocol")
 	}
-	
+
 	if len(diagnostics) != 0 {
 		t.Errorf("Expected empty diagnostics array, got %d diagnostics", len(diagnostics))
 	}
@@ -424,19 +424,19 @@ func TestGetBasicParseErrorDiagnosticsNilParseResult(t *testing.T) {
 	// Create a document with no parse result
 	doc := &Document{
 		URI:         "file:///test.frugal",
-		Path:        "/test.frugal", 
+		Path:        "/test.frugal",
 		Content:     []byte("test content"),
 		Version:     1,
 		ParseResult: nil, // No parse result
 	}
 
 	diagnostics := doc.getBasicParseErrorDiagnostics()
-	
+
 	// Should return empty array, not nil
 	if diagnostics == nil {
 		t.Error("getBasicParseErrorDiagnostics should return empty array, not nil")
 	}
-	
+
 	if len(diagnostics) != 0 {
 		t.Errorf("Expected empty diagnostics array, got %d diagnostics", len(diagnostics))
 	}

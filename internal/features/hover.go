@@ -24,30 +24,30 @@ func (h *HoverProvider) ProvideHover(doc *document.Document, position protocol.P
 	if doc.ParseResult == nil || doc.ParseResult.GetRootNode() == nil {
 		return nil, nil
 	}
-	
+
 	// Validate position bounds
 	lines := strings.Split(string(doc.Content), "\n")
 	if int(position.Line) >= len(lines) {
 		return nil, nil // Beyond last line
 	}
-	
+
 	currentLine := lines[position.Line]
 	if int(position.Character) > len(currentLine) {
 		return nil, nil // Beyond line end
 	}
-	
+
 	// Find the node at the position
 	node := FindNodeAtPosition(doc.ParseResult.GetRootNode(), doc.Content, uint(position.Line), uint(position.Character))
 	if node == nil {
 		return nil, nil
 	}
-	
+
 	// Get hover information based on the node
 	hoverInfo := h.getHoverInfo(node, doc)
 	if hoverInfo == nil {
 		return nil, nil
 	}
-	
+
 	// Create the range for the hover
 	hoverRange := protocol.Range{
 		Start: protocol.Position{
@@ -55,11 +55,11 @@ func (h *HoverProvider) ProvideHover(doc *document.Document, position protocol.P
 			Character: uint32(node.StartPosition().Column),
 		},
 		End: protocol.Position{
-			Line:      uint32(node.EndPosition().Row), 
+			Line:      uint32(node.EndPosition().Row),
 			Character: uint32(node.EndPosition().Column),
 		},
 	}
-	
+
 	return &protocol.Hover{
 		Contents: *hoverInfo,
 		Range:    &hoverRange,
@@ -70,10 +70,10 @@ func (h *HoverProvider) ProvideHover(doc *document.Document, position protocol.P
 func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Document) *protocol.MarkupContent {
 	nodeType := node.Kind()
 	nodeText := ast.GetText(node, doc.Content)
-	
+
 	var content strings.Builder
 	var found bool
-	
+
 	// Handle different node types
 	switch nodeType {
 	case "identifier":
@@ -82,14 +82,14 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 			content.WriteString(methodInfo)
 			found = true
 		} else if fieldInfo := h.getFieldInfo(node, doc); fieldInfo != "" {
-			content.WriteString(fieldInfo)  
+			content.WriteString(fieldInfo)
 			found = true
 		} else if symbolInfo := h.findSymbolByName(nodeText, doc); symbolInfo != nil {
 			// Find the symbol this identifier refers to
 			content.WriteString(h.formatSymbolInfo(symbolInfo, doc))
 			found = true
 		}
-		
+
 	case "service_definition":
 		if serviceName := h.extractServiceName(node, doc.Content); serviceName != "" {
 			content.WriteString(fmt.Sprintf("**Service**: `%s`\n\n", serviceName))
@@ -97,7 +97,7 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 			content.WriteString(h.getServiceMethods(node, doc.Content))
 			found = true
 		}
-		
+
 	case "scope_definition":
 		if scopeName := h.extractScopeName(node, doc.Content); scopeName != "" {
 			content.WriteString(fmt.Sprintf("**Scope**: `%s`\n\n", scopeName))
@@ -105,7 +105,7 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 			content.WriteString(h.getScopeEvents(node, doc.Content))
 			found = true
 		}
-		
+
 	case "struct_definition":
 		if structName := h.extractStructName(node, doc.Content); structName != "" {
 			content.WriteString(fmt.Sprintf("**Struct**: `%s`\n\n", structName))
@@ -113,7 +113,7 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 			content.WriteString(h.getStructFields(node, doc.Content))
 			found = true
 		}
-		
+
 	case "enum_definition":
 		if enumName := h.extractEnumName(node, doc.Content); enumName != "" {
 			content.WriteString(fmt.Sprintf("**Enum**: `%s`\n\n", enumName))
@@ -121,19 +121,19 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 			content.WriteString(h.getEnumValues(node, doc.Content))
 			found = true
 		}
-		
+
 	case "const_definition":
 		if constInfo := h.extractConstInfo(node, doc.Content); constInfo != "" {
 			content.WriteString(fmt.Sprintf("**Constant**: %s\n\n", constInfo))
 			found = true
 		}
-		
+
 	case "typedef_definition":
 		if typedefInfo := h.extractTypedefInfo(node, doc.Content); typedefInfo != "" {
 			content.WriteString(fmt.Sprintf("**Type Alias**: %s\n\n", typedefInfo))
 			found = true
 		}
-		
+
 	// Handle type information
 	case "field_type":
 		typeInfo := h.getTypeInfo(nodeText)
@@ -142,7 +142,7 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 			found = true
 		}
 	}
-	
+
 	// Add syntax information for keywords
 	if !found {
 		if keywordInfo := h.getKeywordInfo(nodeText); keywordInfo != "" {
@@ -150,11 +150,11 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 			found = true
 		}
 	}
-	
+
 	if !found {
 		return nil
 	}
-	
+
 	return &protocol.MarkupContent{
 		Kind:  protocol.MarkupKindMarkdown,
 		Value: content.String(),
@@ -175,7 +175,7 @@ func (h *HoverProvider) findSymbolByName(name string, doc *document.Document) *a
 // formatSymbolInfo formats hover information for a symbol
 func (h *HoverProvider) formatSymbolInfo(symbol *ast.Symbol, doc *document.Document) string {
 	var content strings.Builder
-	
+
 	// Symbol type and name
 	switch symbol.Type {
 	case ast.NodeTypeService:
@@ -200,10 +200,10 @@ func (h *HoverProvider) formatSymbolInfo(symbol *ast.Symbol, doc *document.Docum
 		content.WriteString(fmt.Sprintf("**Exception**: `%s`\n\n", symbol.Name))
 		content.WriteString("Exception type definition.")
 	}
-	
+
 	// Add location information
 	content.WriteString(fmt.Sprintf("\n\n*Defined at line %d, column %d*", symbol.Line+1, symbol.Column+1))
-	
+
 	return content.String()
 }
 
@@ -216,7 +216,7 @@ func (h *HoverProvider) extractServiceName(node *tree_sitter.Node, source []byte
 	return ""
 }
 
-// extractScopeName extracts the scope name from a scope definition node  
+// extractScopeName extracts the scope name from a scope definition node
 func (h *HoverProvider) extractScopeName(node *tree_sitter.Node, source []byte) string {
 	nameNode := ast.FindNodeByType(node, "identifier")
 	if nameNode != nil {
@@ -247,7 +247,7 @@ func (h *HoverProvider) extractEnumName(node *tree_sitter.Node, source []byte) s
 func (h *HoverProvider) extractConstInfo(node *tree_sitter.Node, source []byte) string {
 	// Find type, name, and value
 	var constType, constName, constValue string
-	
+
 	childCount := node.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := node.Child(i)
@@ -262,14 +262,14 @@ func (h *HoverProvider) extractConstInfo(node *tree_sitter.Node, source []byte) 
 			constValue = ast.GetText(child, source)
 		}
 	}
-	
+
 	return fmt.Sprintf("`%s %s = %s`", constType, constName, constValue)
 }
 
 // extractTypedefInfo extracts typedef information
 func (h *HoverProvider) extractTypedefInfo(node *tree_sitter.Node, source []byte) string {
 	var baseType, aliasName string
-	
+
 	childCount := node.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := node.Child(i)
@@ -280,7 +280,7 @@ func (h *HoverProvider) extractTypedefInfo(node *tree_sitter.Node, source []byte
 			aliasName = ast.GetText(child, source)
 		}
 	}
-	
+
 	return fmt.Sprintf("`%s` → `%s`", aliasName, baseType)
 }
 
@@ -288,13 +288,13 @@ func (h *HoverProvider) extractTypedefInfo(node *tree_sitter.Node, source []byte
 func (h *HoverProvider) getServiceMethods(node *tree_sitter.Node, source []byte) string {
 	var content strings.Builder
 	content.WriteString("**Methods:**\n")
-	
+
 	// Find service body and extract methods
 	serviceBody := ast.FindNodeByType(node, "service_body")
 	if serviceBody == nil {
 		return "No methods found."
 	}
-	
+
 	methodCount := 0
 	childCount := serviceBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
@@ -305,11 +305,11 @@ func (h *HoverProvider) getServiceMethods(node *tree_sitter.Node, source []byte)
 			methodCount++
 		}
 	}
-	
+
 	if methodCount == 0 {
 		return "No methods defined."
 	}
-	
+
 	return content.String()
 }
 
@@ -317,13 +317,13 @@ func (h *HoverProvider) getServiceMethods(node *tree_sitter.Node, source []byte)
 func (h *HoverProvider) getScopeEvents(node *tree_sitter.Node, source []byte) string {
 	var content strings.Builder
 	content.WriteString("**Events:**\n")
-	
+
 	// Find scope body and extract events
 	scopeBody := ast.FindNodeByType(node, "scope_body")
 	if scopeBody == nil {
 		return "No events found."
 	}
-	
+
 	eventCount := 0
 	childCount := scopeBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
@@ -334,11 +334,11 @@ func (h *HoverProvider) getScopeEvents(node *tree_sitter.Node, source []byte) st
 			eventCount++
 		}
 	}
-	
+
 	if eventCount == 0 {
 		return "No events defined."
 	}
-	
+
 	return content.String()
 }
 
@@ -346,13 +346,13 @@ func (h *HoverProvider) getScopeEvents(node *tree_sitter.Node, source []byte) st
 func (h *HoverProvider) getStructFields(node *tree_sitter.Node, source []byte) string {
 	var content strings.Builder
 	content.WriteString("**Fields:**\n")
-	
+
 	// Find struct body and extract fields
 	structBody := ast.FindNodeByType(node, "struct_body")
 	if structBody == nil {
 		return "No fields found."
 	}
-	
+
 	fieldCount := 0
 	childCount := structBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
@@ -363,11 +363,11 @@ func (h *HoverProvider) getStructFields(node *tree_sitter.Node, source []byte) s
 			fieldCount++
 		}
 	}
-	
+
 	if fieldCount == 0 {
 		return "No fields defined."
 	}
-	
+
 	return content.String()
 }
 
@@ -375,13 +375,13 @@ func (h *HoverProvider) getStructFields(node *tree_sitter.Node, source []byte) s
 func (h *HoverProvider) getEnumValues(node *tree_sitter.Node, source []byte) string {
 	var content strings.Builder
 	content.WriteString("**Values:**\n")
-	
+
 	// Find enum body and extract values
 	enumBody := ast.FindNodeByType(node, "enum_body")
 	if enumBody == nil {
 		return "No values found."
 	}
-	
+
 	valueCount := 0
 	childCount := enumBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
@@ -392,32 +392,32 @@ func (h *HoverProvider) getEnumValues(node *tree_sitter.Node, source []byte) str
 			valueCount++
 		}
 	}
-	
+
 	if valueCount == 0 {
 		return "No values defined."
 	}
-	
+
 	return content.String()
 }
 
 // getTypeInfo returns information about Frugal types
 func (h *HoverProvider) getTypeInfo(typeName string) string {
 	typeMap := map[string]string{
-		"bool":    "Boolean value (true/false)",
-		"byte":    "8-bit signed integer (-128 to 127)",
-		"i8":      "8-bit signed integer (-128 to 127)",
-		"i16":     "16-bit signed integer (-32,768 to 32,767)",
-		"i32":     "32-bit signed integer (-2^31 to 2^31-1)",
-		"i64":     "64-bit signed integer (-2^63 to 2^63-1)",
-		"double":  "64-bit floating point number",
-		"string":  "UTF-8 encoded string",
-		"binary":  "Byte array/binary data",
-		"void":    "No return value",
-		"list":    "Ordered collection of elements",
-		"set":     "Unordered collection of unique elements", 
-		"map":     "Key-value mapping",
+		"bool":   "Boolean value (true/false)",
+		"byte":   "8-bit signed integer (-128 to 127)",
+		"i8":     "8-bit signed integer (-128 to 127)",
+		"i16":    "16-bit signed integer (-32,768 to 32,767)",
+		"i32":    "32-bit signed integer (-2^31 to 2^31-1)",
+		"i64":    "64-bit signed integer (-2^63 to 2^63-1)",
+		"double": "64-bit floating point number",
+		"string": "UTF-8 encoded string",
+		"binary": "Byte array/binary data",
+		"void":   "No return value",
+		"list":   "Ordered collection of elements",
+		"set":    "Unordered collection of unique elements",
+		"map":    "Key-value mapping",
 	}
-	
+
 	if info, exists := typeMap[typeName]; exists {
 		return info
 	}
@@ -443,7 +443,7 @@ func (h *HoverProvider) getKeywordInfo(keyword string) string {
 		"optional":  "**Keyword**: `optional`\n\nField modifier indicating the field is optional.",
 		"prefix":    "**Keyword**: `prefix`\n\nDefines topic prefix for pub/sub messaging.",
 	}
-	
+
 	if info, exists := keywordMap[keyword]; exists {
 		return info
 	}
@@ -456,12 +456,12 @@ func (h *HoverProvider) getMethodInfo(node *tree_sitter.Node, doc *document.Docu
 	current := node.Parent()
 	for current != nil {
 		nodeType := current.Kind()
-		
+
 		// Check if we're in a function/method declaration
 		if nodeType == "function_declaration" || nodeType == "method_declaration" || nodeType == "function_definition" {
 			return h.formatMethodDeclaration(current, doc.Content)
 		}
-		
+
 		// If we find a service body, we might be in a method
 		if nodeType == "service_body" {
 			// Check if this identifier is the method name in a method declaration
@@ -469,25 +469,25 @@ func (h *HoverProvider) getMethodInfo(node *tree_sitter.Node, doc *document.Docu
 				return h.formatMethodFromContext(node, current, doc.Content)
 			}
 		}
-		
+
 		current = current.Parent()
 	}
-	
+
 	return ""
 }
 
-// getFieldInfo checks if an identifier is a field and returns field information  
+// getFieldInfo checks if an identifier is a field and returns field information
 func (h *HoverProvider) getFieldInfo(node *tree_sitter.Node, doc *document.Document) string {
 	// Walk up the tree to see if we're in a field declaration context
 	current := node.Parent()
 	for current != nil {
 		nodeType := current.Kind()
-		
+
 		// Check if we're in a field declaration
 		if nodeType == "field_declaration" || nodeType == "field" {
 			return h.formatFieldDeclaration(current, doc.Content)
 		}
-		
+
 		// If we find a struct body, we might be in a field
 		if nodeType == "struct_body" {
 			// Check if this identifier is the field name/type in a field declaration
@@ -495,10 +495,10 @@ func (h *HoverProvider) getFieldInfo(node *tree_sitter.Node, doc *document.Docum
 				return h.formatFieldFromContext(node, current, doc.Content)
 			}
 		}
-		
+
 		current = current.Parent()
 	}
-	
+
 	return ""
 }
 
@@ -508,8 +508,8 @@ func (h *HoverProvider) isMethodIdentifier(identifierNode, serviceBody *tree_sit
 	childCount := serviceBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := serviceBody.Child(i)
-		
-		// Find identifier nodes that could be method names  
+
+		// Find identifier nodes that could be method names
 		if h.containsNode(child, identifierNode) {
 			// Check if it's positioned where a method name would be
 			// This is a simplified check - in a real implementation you'd parse the grammar more carefully
@@ -525,7 +525,7 @@ func (h *HoverProvider) isFieldIdentifier(identifierNode, structBody *tree_sitte
 	childCount := structBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := structBody.Child(i)
-		
+
 		if h.containsNode(child, identifierNode) {
 			return true
 		}
@@ -538,7 +538,7 @@ func (h *HoverProvider) containsNode(parent, target *tree_sitter.Node) bool {
 	if parent == target {
 		return true
 	}
-	
+
 	childCount := parent.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := parent.Child(i)
@@ -557,25 +557,25 @@ func (h *HoverProvider) formatMethodDeclaration(node *tree_sitter.Node, source [
 
 // formatMethodFromContext extracts method information from service context
 func (h *HoverProvider) formatMethodFromContext(identifierNode, serviceBody *tree_sitter.Node, source []byte) string {
-	// Find the line containing this identifier 
+	// Find the line containing this identifier
 	identifierText := ast.GetText(identifierNode, source)
-	
+
 	// Look through service body for method declarations
 	childCount := serviceBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := serviceBody.Child(i)
 		childText := ast.GetText(child, source)
-		
+
 		// If this line contains our identifier and looks like a method
 		if strings.Contains(childText, identifierText) && (strings.Contains(childText, "(") && strings.Contains(childText, ")")) {
 			return fmt.Sprintf("**Method**: `%s`\n\n```frugal\n%s\n```", identifierText, strings.TrimSpace(childText))
 		}
 	}
-	
+
 	return ""
 }
 
-// formatFieldDeclaration formats a field declaration for hover  
+// formatFieldDeclaration formats a field declaration for hover
 func (h *HoverProvider) formatFieldDeclaration(node *tree_sitter.Node, source []byte) string {
 	fieldText := ast.GetText(node, source)
 	return fmt.Sprintf("**Field**\n\n```frugal\n%s\n```", fieldText)
@@ -585,18 +585,18 @@ func (h *HoverProvider) formatFieldDeclaration(node *tree_sitter.Node, source []
 func (h *HoverProvider) formatFieldFromContext(identifierNode, structBody *tree_sitter.Node, source []byte) string {
 	// Find the line containing this identifier
 	identifierText := ast.GetText(identifierNode, source)
-	
+
 	// Look through struct body for field declarations
 	childCount := structBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := structBody.Child(i)
 		childText := ast.GetText(child, source)
-		
+
 		// If this line contains our identifier and looks like a field
 		if strings.Contains(childText, identifierText) {
 			return fmt.Sprintf("**Field**: `%s`\n\n```frugal\n%s\n```", identifierText, strings.TrimSpace(childText))
 		}
 	}
-	
+
 	return ""
 }

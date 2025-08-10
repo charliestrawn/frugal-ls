@@ -30,7 +30,7 @@ func createTestDocumentForHover(uri, content string) (*document.Document, error)
 
 	// Extract path from URI for proper validation
 	path := strings.TrimPrefix(uri, "file://")
-	
+
 	doc := &document.Document{
 		URI:         uri,
 		Path:        path,

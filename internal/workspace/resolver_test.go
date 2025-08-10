@@ -10,27 +10,27 @@ import (
 func TestNewIncludeResolver(t *testing.T) {
 	workspaceRoots := []string{"/workspace1", "/workspace2"}
 	resolver := NewIncludeResolver(workspaceRoots)
-	
+
 	if resolver == nil {
 		t.Fatal("Expected non-nil IncludeResolver")
 	}
-	
+
 	if len(resolver.workspaceRoots) != 2 {
 		t.Errorf("Expected 2 workspace roots, got %d", len(resolver.workspaceRoots))
 	}
-	
+
 	if resolver.workspaceRoots[0] != "/workspace1" || resolver.workspaceRoots[1] != "/workspace2" {
 		t.Errorf("Expected workspace roots [/workspace1, /workspace2], got %v", resolver.workspaceRoots)
 	}
-	
+
 	if resolver.dependencies == nil {
 		t.Error("Expected non-nil dependencies map")
 	}
-	
+
 	if resolver.dependents == nil {
 		t.Error("Expected non-nil dependents map")
 	}
-	
+
 	if resolver.includeCache == nil {
 		t.Error("Expected non-nil includeCache map")
 	}
@@ -38,19 +38,19 @@ func TestNewIncludeResolver(t *testing.T) {
 
 func TestUpdateDocumentNoIncludes(t *testing.T) {
 	resolver := NewIncludeResolver([]string{"/workspace"})
-	
+
 	content := `struct User {
     1: i64 id,
     2: string name
 }`
 
 	doc := createTestDocument("file:///test.frugal", content)
-	
+
 	err := resolver.UpdateDocument(doc)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	// Document with no includes should have no dependencies
 	deps := resolver.GetDependencies("file:///test.frugal")
 	if len(deps) != 0 {
@@ -60,7 +60,7 @@ func TestUpdateDocumentNoIncludes(t *testing.T) {
 
 func TestUpdateDocumentWithIncludes(t *testing.T) {
 	resolver := NewIncludeResolver([]string{"/workspace"})
-	
+
 	content := `include "common.frugal"
 include "types.frugal"
 
@@ -69,12 +69,12 @@ struct User {
 }`
 
 	doc := createTestDocument("file:///test.frugal", content)
-	
+
 	err := resolver.UpdateDocument(doc)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	// Should find dependencies
 	deps := resolver.GetDependencies("file:///test.frugal")
 	if len(deps) == 0 {
@@ -84,7 +84,7 @@ struct User {
 
 func TestGetDependenciesNotFound(t *testing.T) {
 	resolver := NewIncludeResolver([]string{"/workspace"})
-	
+
 	deps := resolver.GetDependencies("file:///nonexistent.frugal")
 	if len(deps) != 0 {
 		t.Errorf("Expected 0 dependencies for nonexistent file, got %d", len(deps))
@@ -93,7 +93,7 @@ func TestGetDependenciesNotFound(t *testing.T) {
 
 func TestGetDependents(t *testing.T) {
 	resolver := NewIncludeResolver([]string{"/workspace"})
-	
+
 	// Create a document that includes another file
 	content1 := `include "common.frugal"
 
@@ -106,7 +106,7 @@ struct User {
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	content2 := `include "common.frugal"
 
 struct Order {
@@ -118,10 +118,10 @@ struct Order {
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	// Get dependents of common.frugal (files that include it)
 	dependents := resolver.GetDependents("file:///common.frugal")
-	
+
 	// Both user.frugal and order.frugal should depend on common.frugal
 	if len(dependents) < 1 {
 		t.Error("Expected at least 1 dependent of common.frugal")
@@ -130,7 +130,7 @@ struct Order {
 
 func TestGetDependentsNotFound(t *testing.T) {
 	resolver := NewIncludeResolver([]string{"/workspace"})
-	
+
 	dependents := resolver.GetDependents("file:///nonexistent.frugal")
 	if len(dependents) != 0 {
 		t.Errorf("Expected 0 dependents for nonexistent file, got %d", len(dependents))
@@ -139,7 +139,7 @@ func TestGetDependentsNotFound(t *testing.T) {
 
 func TestResolveIncludePath(t *testing.T) {
 	resolver := NewIncludeResolver([]string{"/workspace"})
-	
+
 	testCases := []struct {
 		name        string
 		includePath string
@@ -169,18 +169,18 @@ func TestResolveIncludePath(t *testing.T) {
 			expectError: false,
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			resolved, err := resolver.resolveIncludePath(tc.includePath, tc.fromFile)
-			
+
 			if tc.expectError && err == nil {
 				t.Error("Expected error but got none")
 			}
 			if !tc.expectError && err != nil {
 				t.Errorf("Expected no error but got: %v", err)
 			}
-			
+
 			if resolved != tc.expected {
 				t.Errorf("Expected %q, got %q", tc.expected, resolved)
 			}
@@ -190,7 +190,7 @@ func TestResolveIncludePath(t *testing.T) {
 
 func TestClearDependencies(t *testing.T) {
 	resolver := NewIncludeResolver([]string{"/workspace"})
-	
+
 	// Add some dependencies first
 	content := `include "common.frugal"
 
@@ -203,13 +203,13 @@ struct User {
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	// Verify dependencies exist
 	deps := resolver.GetDependencies("file:///test.frugal")
 	if len(deps) == 0 {
 		t.Error("Expected dependencies to be found")
 	}
-	
+
 	// Update with content that has no includes
 	contentNoIncludes := `struct User {
     1: i64 id
@@ -220,7 +220,7 @@ struct User {
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	// Dependencies should be cleared
 	deps = resolver.GetDependencies("file:///test.frugal")
 	if len(deps) != 0 {
@@ -230,10 +230,10 @@ struct User {
 
 func TestConcurrentAccess(t *testing.T) {
 	resolver := NewIncludeResolver([]string{"/workspace"})
-	
+
 	// Test concurrent access to resolver methods
 	done := make(chan bool)
-	
+
 	// Concurrent updates
 	go func() {
 		for i := 0; i < 10; i++ {
@@ -244,7 +244,7 @@ struct Test {}`
 		}
 		done <- true
 	}()
-	
+
 	go func() {
 		for i := 0; i < 10; i++ {
 			content := `include "shared.frugal"
@@ -254,7 +254,7 @@ struct Test {}`
 		}
 		done <- true
 	}()
-	
+
 	// Concurrent reads
 	go func() {
 		for i := 0; i < 10; i++ {
@@ -263,7 +263,7 @@ struct Test {}`
 		}
 		done <- true
 	}()
-	
+
 	// Wait for all goroutines to complete
 	for i := 0; i < 3; i++ {
 		<-done
@@ -272,7 +272,7 @@ struct Test {}`
 
 func TestExtractIncludes(t *testing.T) {
 	resolver := NewIncludeResolver([]string{"/workspace"})
-	
+
 	testCases := []struct {
 		name            string
 		content         string
@@ -313,17 +313,17 @@ service UserService {
 			expectedCount: 2,
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			doc := createTestDocument("file:///test.frugal", tc.content)
-			
+
 			includes := resolver.extractIncludes(doc)
-			
+
 			if len(includes) != tc.expectedCount {
 				t.Errorf("Expected %d includes, got %d", tc.expectedCount, len(includes))
 			}
-			
+
 			if tc.expectedInclude != "" {
 				found := false
 				for _, include := range includes {
@@ -342,7 +342,7 @@ service UserService {
 
 func TestResolveIncludePathEdgeCases(t *testing.T) {
 	resolver := NewIncludeResolver([]string{"/workspace"})
-	
+
 	testCases := []struct {
 		name        string
 		includePath string
@@ -356,7 +356,7 @@ func TestResolveIncludePathEdgeCases(t *testing.T) {
 			expectError: false, // Resolver handles gracefully
 		},
 		{
-			name:        "empty from file", 
+			name:        "empty from file",
 			includePath: "common.frugal",
 			fromFile:    "",
 			expectError: false, // Resolver handles gracefully
@@ -368,11 +368,11 @@ func TestResolveIncludePathEdgeCases(t *testing.T) {
 			expectError: false, // Resolver handles gracefully
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result, err := resolver.resolveIncludePath(tc.includePath, tc.fromFile)
-			
+
 			if tc.expectError {
 				if err == nil {
 					t.Error("Expected error but got none")
@@ -391,41 +391,41 @@ func TestResolveIncludePathEdgeCases(t *testing.T) {
 
 func TestDependencyGraphIntegrity(t *testing.T) {
 	resolver := NewIncludeResolver([]string{"/workspace"})
-	
+
 	// Create a dependency chain: A includes B, B includes C
 	contentA := `include "b.frugal"
 struct A {}`
-	
+
 	contentB := `include "c.frugal"
 struct B {}`
-	
+
 	contentC := `struct C {}`
-	
+
 	docA := createTestDocument("file:///a.frugal", contentA)
 	docB := createTestDocument("file:///b.frugal", contentB)
 	docC := createTestDocument("file:///c.frugal", contentC)
-	
+
 	// Update documents
 	resolver.UpdateDocument(docA)
 	resolver.UpdateDocument(docB)
 	resolver.UpdateDocument(docC)
-	
+
 	// Check dependency relationships
 	depsA := resolver.GetDependencies("file:///a.frugal")
 	if len(depsA) == 0 {
 		t.Error("Expected A to have dependencies")
 	}
-	
+
 	depsB := resolver.GetDependencies("file:///b.frugal")
 	if len(depsB) == 0 {
 		t.Error("Expected B to have dependencies")
 	}
-	
+
 	depsC := resolver.GetDependencies("file:///c.frugal")
 	if len(depsC) != 0 {
 		t.Errorf("Expected C to have no dependencies, got %d", len(depsC))
 	}
-	
+
 	// Check dependent relationships
 	dependentsC := resolver.GetDependents("file:///c.frugal")
 	if len(dependentsC) == 0 {

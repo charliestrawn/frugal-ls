@@ -15,32 +15,32 @@ import (
 )
 
 const (
-	LanguageServerName = "frugal-ls"
+	LanguageServerName    = "frugal-ls"
 	LanguageServerVersion = "0.1.0"
 )
 
 // Server represents the Frugal LSP server
 type Server struct {
-	server         *server.Server
-	docManager     *document.Manager
-	logger         *log.Logger
-	
+	server     *server.Server
+	docManager *document.Manager
+	logger     *log.Logger
+
 	// Workspace management
 	includeResolver *workspace.IncludeResolver
 	symbolIndex     *workspace.SymbolIndex
 	workspaceRoots  []string
-	
+
 	// Language feature providers
-	completionProvider      *features.CompletionProvider
-	hoverProvider          *features.HoverProvider
-	documentSymbolProvider *features.DocumentSymbolProvider
-	definitionProvider     *features.DefinitionProvider
-	referencesProvider     *features.ReferencesProvider
+	completionProvider        *features.CompletionProvider
+	hoverProvider             *features.HoverProvider
+	documentSymbolProvider    *features.DocumentSymbolProvider
+	definitionProvider        *features.DefinitionProvider
+	referencesProvider        *features.ReferencesProvider
 	documentHighlightProvider *features.DocumentHighlightProvider
-	codeActionProvider     *features.CodeActionProvider
-	formattingProvider     *features.FormattingProvider
-	semanticTokensProvider *features.SemanticTokensProvider
-	renameProvider         *features.RenameProvider
+	codeActionProvider        *features.CodeActionProvider
+	formattingProvider        *features.FormattingProvider
+	semanticTokensProvider    *features.SemanticTokensProvider
+	renameProvider            *features.RenameProvider
 }
 
 // NewServer creates a new Frugal LSP server
@@ -65,46 +65,46 @@ func NewServer() (*Server, error) {
 
 	// Create the server with language feature providers
 	lspServer := &Server{
-		docManager:             docManager,
-		logger:                 logger,
-		includeResolver:        includeResolver,
-		symbolIndex:            symbolIndex,
-		workspaceRoots:         workspaceRoots,
-		completionProvider:     features.NewCompletionProvider(),
-		hoverProvider:         features.NewHoverProvider(),
-		documentSymbolProvider: features.NewDocumentSymbolProvider(),
-		definitionProvider:    features.NewDefinitionProvider(),
-		referencesProvider:    features.NewReferencesProvider(),
+		docManager:                docManager,
+		logger:                    logger,
+		includeResolver:           includeResolver,
+		symbolIndex:               symbolIndex,
+		workspaceRoots:            workspaceRoots,
+		completionProvider:        features.NewCompletionProvider(),
+		hoverProvider:             features.NewHoverProvider(),
+		documentSymbolProvider:    features.NewDocumentSymbolProvider(),
+		definitionProvider:        features.NewDefinitionProvider(),
+		referencesProvider:        features.NewReferencesProvider(),
 		documentHighlightProvider: features.NewDocumentHighlightProvider(),
-		codeActionProvider:    features.NewCodeActionProvider(),
-		formattingProvider:    features.NewFormattingProvider(),
-		semanticTokensProvider: features.NewSemanticTokensProvider(),
-		renameProvider:        features.NewRenameProvider(),
+		codeActionProvider:        features.NewCodeActionProvider(),
+		formattingProvider:        features.NewFormattingProvider(),
+		semanticTokensProvider:    features.NewSemanticTokensProvider(),
+		renameProvider:            features.NewRenameProvider(),
 	}
 
 	// Set up GLSP server
 	handler := protocol.Handler{
-		Initialize:                lspServer.initialize,
-		Initialized:               lspServer.initialized,
-		Shutdown:                  lspServer.shutdown,
-		TextDocumentDidOpen:       lspServer.textDocumentDidOpen,
-		TextDocumentDidChange:     lspServer.textDocumentDidChange,
-		TextDocumentDidClose:      lspServer.textDocumentDidClose,
-		TextDocumentDidSave:       lspServer.textDocumentDidSave,
-		TextDocumentCompletion:    lspServer.textDocumentCompletion,
-		TextDocumentHover:         lspServer.textDocumentHover,
-		TextDocumentDocumentSymbol: lspServer.textDocumentDocumentSymbol,
-		TextDocumentDefinition:    lspServer.textDocumentDefinition,
-		TextDocumentReferences:    lspServer.textDocumentReferences,
-		TextDocumentDocumentHighlight: lspServer.textDocumentDocumentHighlight,
-		TextDocumentCodeAction:    lspServer.textDocumentCodeAction,
-		TextDocumentFormatting:    lspServer.textDocumentFormatting,
-		TextDocumentRangeFormatting: lspServer.textDocumentRangeFormatting,
-		TextDocumentSemanticTokensFull: lspServer.textDocumentSemanticTokensFull,
+		Initialize:                      lspServer.initialize,
+		Initialized:                     lspServer.initialized,
+		Shutdown:                        lspServer.shutdown,
+		TextDocumentDidOpen:             lspServer.textDocumentDidOpen,
+		TextDocumentDidChange:           lspServer.textDocumentDidChange,
+		TextDocumentDidClose:            lspServer.textDocumentDidClose,
+		TextDocumentDidSave:             lspServer.textDocumentDidSave,
+		TextDocumentCompletion:          lspServer.textDocumentCompletion,
+		TextDocumentHover:               lspServer.textDocumentHover,
+		TextDocumentDocumentSymbol:      lspServer.textDocumentDocumentSymbol,
+		TextDocumentDefinition:          lspServer.textDocumentDefinition,
+		TextDocumentReferences:          lspServer.textDocumentReferences,
+		TextDocumentDocumentHighlight:   lspServer.textDocumentDocumentHighlight,
+		TextDocumentCodeAction:          lspServer.textDocumentCodeAction,
+		TextDocumentFormatting:          lspServer.textDocumentFormatting,
+		TextDocumentRangeFormatting:     lspServer.textDocumentRangeFormatting,
+		TextDocumentSemanticTokensFull:  lspServer.textDocumentSemanticTokensFull,
 		TextDocumentSemanticTokensRange: lspServer.textDocumentSemanticTokensRange,
-		TextDocumentPrepareRename: lspServer.textDocumentPrepareRename,
-		TextDocumentRename:       lspServer.textDocumentRename,
-		WorkspaceSymbol:          lspServer.workspaceSymbol,
+		TextDocumentPrepareRename:       lspServer.textDocumentPrepareRename,
+		TextDocumentRename:              lspServer.textDocumentRename,
+		WorkspaceSymbol:                 lspServer.workspaceSymbol,
 	}
 
 	serverInstance := server.NewServer(&handler, LanguageServerName, false)
@@ -116,7 +116,7 @@ func NewServer() (*Server, error) {
 // Run starts the LSP server
 func (s *Server) Run() error {
 	s.logger.Println("Starting Frugal LSP server...")
-	
+
 	defer func() {
 		s.logger.Println("Shutting down Frugal LSP server...")
 		if s.docManager != nil {
@@ -130,7 +130,7 @@ func (s *Server) Run() error {
 // initialize handles the initialize request
 func (s *Server) initialize(context *glsp.Context, params *protocol.InitializeParams) (any, error) {
 	s.logger.Printf("Initialize request from client: %s", params.ClientInfo.Name)
-	
+
 	// Update workspace roots from initialize params
 	if params.WorkspaceFolders != nil && len(params.WorkspaceFolders) > 0 {
 		s.workspaceRoots = nil
@@ -142,9 +142,9 @@ func (s *Server) initialize(context *glsp.Context, params *protocol.InitializePa
 		s.workspaceRoots = []string{*params.RootURI}
 		s.includeResolver = workspace.NewIncludeResolver(s.workspaceRoots)
 	}
-	
+
 	capabilities := s.getServerCapabilities()
-	
+
 	version := LanguageServerVersion
 	serverInfo := protocol.InitializeResultServerInfo{
 		Name:    LanguageServerName,
@@ -172,7 +172,7 @@ func (s *Server) shutdown(context *glsp.Context) error {
 // textDocumentDidOpen handles textDocument/didOpen notifications
 func (s *Server) textDocumentDidOpen(context *glsp.Context, params *protocol.DidOpenTextDocumentParams) error {
 	s.logger.Printf("Document opened: %s", params.TextDocument.URI)
-	
+
 	doc, err := s.docManager.DidOpen(params)
 	if err != nil {
 		s.logger.Printf("Error opening document: %v", err)
@@ -185,10 +185,10 @@ func (s *Server) textDocumentDidOpen(context *glsp.Context, params *protocol.Did
 		if err := s.includeResolver.UpdateDocument(doc); err != nil {
 			s.logger.Printf("Error updating document dependencies: %v", err)
 		}
-		
+
 		// Update symbol index
 		s.symbolIndex.UpdateDocument(doc)
-		
+
 		s.publishDiagnostics(context, doc)
 	}
 
@@ -198,7 +198,7 @@ func (s *Server) textDocumentDidOpen(context *glsp.Context, params *protocol.Did
 // textDocumentDidChange handles textDocument/didChange notifications
 func (s *Server) textDocumentDidChange(context *glsp.Context, params *protocol.DidChangeTextDocumentParams) error {
 	s.logger.Printf("Document changed: %s (version %d)", params.TextDocument.URI, params.TextDocument.Version)
-	
+
 	doc, err := s.docManager.DidChange(params)
 	if err != nil {
 		s.logger.Printf("Error processing document changes: %v", err)
@@ -211,10 +211,10 @@ func (s *Server) textDocumentDidChange(context *glsp.Context, params *protocol.D
 		if err := s.includeResolver.UpdateDocument(doc); err != nil {
 			s.logger.Printf("Error updating document dependencies: %v", err)
 		}
-		
+
 		// Update symbol index
 		s.symbolIndex.UpdateDocument(doc)
-		
+
 		s.publishDiagnostics(context, doc)
 	}
 
@@ -224,11 +224,11 @@ func (s *Server) textDocumentDidChange(context *glsp.Context, params *protocol.D
 // textDocumentDidClose handles textDocument/didClose notifications
 func (s *Server) textDocumentDidClose(context *glsp.Context, params *protocol.DidCloseTextDocumentParams) error {
 	s.logger.Printf("Document closed: %s", params.TextDocument.URI)
-	
+
 	// Remove from include resolver and symbol index
 	s.includeResolver.RemoveDocument(params.TextDocument.URI)
 	s.symbolIndex.RemoveDocument(params.TextDocument.URI)
-	
+
 	err := s.docManager.DidClose(params)
 	if err != nil {
 		s.logger.Printf("Error closing document: %v", err)
@@ -246,19 +246,19 @@ func (s *Server) textDocumentDidClose(context *glsp.Context, params *protocol.Di
 // textDocumentDidSave handles textDocument/didSave notifications
 func (s *Server) textDocumentDidSave(context *glsp.Context, params *protocol.DidSaveTextDocumentParams) error {
 	s.logger.Printf("Document saved: %s", params.TextDocument.URI)
-	
+
 	// For now, we don't need special handling for save events
 	// The document content is already up-to-date from didChange events
-	
+
 	return nil
 }
 
 // publishDiagnostics sends diagnostics to the client
 func (s *Server) publishDiagnostics(context *glsp.Context, doc *document.Document) {
 	diagnostics := doc.GetDiagnostics()
-	
+
 	s.logger.Printf("Publishing %d diagnostics for %s", len(diagnostics), doc.URI)
-	
+
 	context.Notify(protocol.ServerTextDocumentPublishDiagnostics, protocol.PublishDiagnosticsParams{
 		URI:         doc.URI,
 		Diagnostics: diagnostics,
@@ -276,17 +276,17 @@ func (s *Server) getServerCapabilities() protocol.ServerCapabilities {
 				IncludeText: &[]bool{false}[0],
 			},
 		},
-		
+
 		// Language features
-		HoverProvider:      &[]bool{true}[0],
+		HoverProvider: &[]bool{true}[0],
 		CompletionProvider: &protocol.CompletionOptions{
 			TriggerCharacters: []string{".", ":", " "},
 		},
-		DocumentSymbolProvider: &[]bool{true}[0],
-		DefinitionProvider:     &[]bool{true}[0],
-		ReferencesProvider:     &[]bool{true}[0],
+		DocumentSymbolProvider:    &[]bool{true}[0],
+		DefinitionProvider:        &[]bool{true}[0],
+		ReferencesProvider:        &[]bool{true}[0],
 		DocumentHighlightProvider: &[]bool{true}[0],
-		WorkspaceSymbolProvider: &[]bool{true}[0],
+		WorkspaceSymbolProvider:   &[]bool{true}[0],
 		CodeActionProvider: &protocol.CodeActionOptions{
 			CodeActionKinds: []protocol.CodeActionKind{
 				protocol.CodeActionKindQuickFix,
@@ -314,13 +314,13 @@ func (s *Server) textDocumentCompletion(context *glsp.Context, params *protocol.
 	if !exists || !doc.IsValidFrugalFile() {
 		return nil, nil
 	}
-	
+
 	completions, err := s.completionProvider.ProvideCompletion(doc, params.Position)
 	if err != nil {
 		s.logger.Printf("Error providing completions: %v", err)
 		return nil, err
 	}
-	
+
 	s.logger.Printf("Providing %d completions for %s", len(completions), params.TextDocument.URI)
 	return completions, nil
 }
@@ -331,13 +331,13 @@ func (s *Server) textDocumentHover(context *glsp.Context, params *protocol.Hover
 	if !exists || !doc.IsValidFrugalFile() {
 		return nil, nil
 	}
-	
+
 	hover, err := s.hoverProvider.ProvideHover(doc, params.Position)
 	if err != nil {
 		s.logger.Printf("Error providing hover: %v", err)
 		return nil, err
 	}
-	
+
 	if hover != nil {
 		s.logger.Printf("Providing hover for %s", params.TextDocument.URI)
 	}
@@ -350,13 +350,13 @@ func (s *Server) textDocumentDocumentSymbol(context *glsp.Context, params *proto
 	if !exists || !doc.IsValidFrugalFile() {
 		return nil, nil
 	}
-	
+
 	symbols, err := s.documentSymbolProvider.ProvideDocumentSymbols(doc)
 	if err != nil {
 		s.logger.Printf("Error providing document symbols: %v", err)
 		return nil, err
 	}
-	
+
 	s.logger.Printf("Providing %d document symbols for %s", len(symbols), params.TextDocument.URI)
 	return symbols, nil
 }
@@ -367,16 +367,16 @@ func (s *Server) textDocumentDefinition(context *glsp.Context, params *protocol.
 	if !exists || !doc.IsValidFrugalFile() {
 		return nil, nil
 	}
-	
+
 	// Get all documents for cross-file navigation
 	allDocuments := s.getAllDocuments()
-	
+
 	locations, err := s.definitionProvider.ProvideDefinition(doc, params.Position, allDocuments)
 	if err != nil {
 		s.logger.Printf("Error providing definition: %v", err)
 		return nil, err
 	}
-	
+
 	s.logger.Printf("Providing %d definition locations for %s", len(locations), params.TextDocument.URI)
 	return locations, nil
 }
@@ -387,16 +387,16 @@ func (s *Server) textDocumentReferences(context *glsp.Context, params *protocol.
 	if !exists || !doc.IsValidFrugalFile() {
 		return nil, nil
 	}
-	
+
 	// Get all documents for cross-file reference search
 	allDocuments := s.getAllDocuments()
-	
+
 	locations, err := s.referencesProvider.ProvideReferences(doc, params.Position, params.Context.IncludeDeclaration, allDocuments)
 	if err != nil {
 		s.logger.Printf("Error providing references: %v", err)
 		return nil, err
 	}
-	
+
 	s.logger.Printf("Providing %d reference locations for %s", len(locations), params.TextDocument.URI)
 	return locations, nil
 }
@@ -407,13 +407,13 @@ func (s *Server) textDocumentDocumentHighlight(context *glsp.Context, params *pr
 	if !exists || !doc.IsValidFrugalFile() {
 		return nil, nil
 	}
-	
+
 	highlights, err := s.documentHighlightProvider.ProvideDocumentHighlight(doc, params.Position)
 	if err != nil {
 		s.logger.Printf("Error providing document highlights: %v", err)
 		return nil, err
 	}
-	
+
 	s.logger.Printf("Providing %d document highlights for %s", len(highlights), params.TextDocument.URI)
 	return highlights, nil
 }
@@ -423,7 +423,7 @@ func (s *Server) workspaceSymbol(context *glsp.Context, params *protocol.Workspa
 	// Use the indexed search for better performance
 	const maxResults = 100
 	symbols := s.symbolIndex.Search(params.Query, maxResults)
-	
+
 	s.logger.Printf("Providing %d indexed workspace symbols for query '%s'", len(symbols), params.Query)
 	return symbols, nil
 }
@@ -434,13 +434,13 @@ func (s *Server) textDocumentCodeAction(context *glsp.Context, params *protocol.
 	if !exists || !doc.IsValidFrugalFile() {
 		return nil, nil
 	}
-	
+
 	actions, err := s.codeActionProvider.ProvideCodeActions(doc, params.Range, params.Context)
 	if err != nil {
 		s.logger.Printf("Error providing code actions: %v", err)
 		return nil, err
 	}
-	
+
 	s.logger.Printf("Providing %d code actions for %s", len(actions), params.TextDocument.URI)
 	return actions, nil
 }
@@ -451,13 +451,13 @@ func (s *Server) textDocumentFormatting(context *glsp.Context, params *protocol.
 	if !exists || !doc.IsValidFrugalFile() {
 		return nil, nil
 	}
-	
+
 	edits, err := s.formattingProvider.ProvideDocumentFormatting(doc, params.Options)
 	if err != nil {
 		s.logger.Printf("Error providing document formatting: %v", err)
 		return nil, err
 	}
-	
+
 	s.logger.Printf("Providing %d formatting edits for %s", len(edits), params.TextDocument.URI)
 	return edits, nil
 }
@@ -468,13 +468,13 @@ func (s *Server) textDocumentRangeFormatting(context *glsp.Context, params *prot
 	if !exists || !doc.IsValidFrugalFile() {
 		return nil, nil
 	}
-	
+
 	edits, err := s.formattingProvider.ProvideDocumentRangeFormatting(doc, params.Range, params.Options)
 	if err != nil {
 		s.logger.Printf("Error providing range formatting: %v", err)
 		return nil, err
 	}
-	
+
 	s.logger.Printf("Providing %d range formatting edits for %s", len(edits), params.TextDocument.URI)
 	return edits, nil
 }
@@ -485,15 +485,15 @@ func (s *Server) textDocumentSemanticTokensFull(context *glsp.Context, params *p
 	if !exists || !doc.IsValidFrugalFile() {
 		return nil, nil
 	}
-	
+
 	s.logger.Printf("Providing semantic tokens for %s", params.TextDocument.URI)
-	
+
 	tokens, err := s.semanticTokensProvider.ProvideSemanticTokens(doc)
 	if err != nil {
 		s.logger.Printf("Semantic tokens error for %s: %v", params.TextDocument.URI, err)
 		return nil, err
 	}
-	
+
 	s.logger.Printf("Provided %d semantic token data points for %s", len(tokens.Data), params.TextDocument.URI)
 	return tokens, nil
 }
@@ -504,15 +504,15 @@ func (s *Server) textDocumentSemanticTokensRange(context *glsp.Context, params *
 	if !exists || !doc.IsValidFrugalFile() {
 		return nil, nil
 	}
-	
+
 	s.logger.Printf("Providing semantic tokens range for %s", params.TextDocument.URI)
-	
+
 	tokens, err := s.semanticTokensProvider.ProvideSemanticTokensRange(doc, params.Range)
 	if err != nil {
 		s.logger.Printf("Semantic tokens range error for %s: %v", params.TextDocument.URI, err)
 		return nil, err
 	}
-	
+
 	return tokens, nil
 }
 

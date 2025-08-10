@@ -5,13 +5,13 @@ import (
 	"log"
 	"os"
 
-	tree_sitter "github.com/tree-sitter/go-tree-sitter"
-	protocol "github.com/tliron/glsp/protocol_3_16"
 	"frugal-ls/internal/document"
 	"frugal-ls/internal/features"
 	"frugal-ls/internal/lsp"
 	"frugal-ls/internal/parser"
 	"frugal-ls/pkg/ast"
+	protocol "github.com/tliron/glsp/protocol_3_16"
+	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 )
 
 func main() {
@@ -170,7 +170,7 @@ func testParseFile(filename string, source ...[]byte) {
 	if root != nil {
 		fmt.Println("\nAST Structure (first 3 levels):")
 		printLimitedTree(root, content, 0, 3)
-		
+
 		// Extract symbols
 		fmt.Println("\nExtracted Symbols:")
 		symbols := ast.ExtractSymbols(root, content)
@@ -178,7 +178,7 @@ func testParseFile(filename string, source ...[]byte) {
 			fmt.Println("  No symbols found")
 		} else {
 			for _, symbol := range symbols {
-				fmt.Printf("  %s %s (line %d, col %d)\n", 
+				fmt.Printf("  %s %s (line %d, col %d)\n",
 					symbol.Type, symbol.Name, symbol.Line+1, symbol.Column+1)
 			}
 		}
@@ -201,21 +201,21 @@ func formatFile(filename string) {
 		Content: content,
 		Version: 1,
 	}
-	
+
 	// Create a formatting provider
 	formatter := features.NewFormattingProvider()
-	
+
 	// Format with default options (spaces, tab size 4)
 	options := protocol.FormattingOptions{
-		"tabSize":     4,
+		"tabSize":      4,
 		"insertSpaces": true,
 	}
-	
+
 	edits, err := formatter.ProvideDocumentFormatting(doc, options)
 	if err != nil {
 		log.Fatalf("Failed to format file: %v", err)
 	}
-	
+
 	// Apply edits and output result
 	if len(edits) > 0 {
 		// For simple cases, we expect one edit that replaces the entire document

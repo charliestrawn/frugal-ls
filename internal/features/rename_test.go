@@ -46,53 +46,53 @@ func TestRenameProviderIsRenameable(t *testing.T) {
 	provider := NewRenameProvider()
 
 	testCases := []struct {
-		name      string
-		symbol    *SymbolInfo
+		name       string
+		symbol     *SymbolInfo
 		renameable bool
 	}{
 		{
-			name: "user-defined struct",
-			symbol: &SymbolInfo{Name: "User", Kind: "struct"},
+			name:       "user-defined struct",
+			symbol:     &SymbolInfo{Name: "User", Kind: "struct"},
 			renameable: true,
 		},
 		{
-			name: "built-in type string",
-			symbol: &SymbolInfo{Name: "string", Kind: "type"},
+			name:       "built-in type string",
+			symbol:     &SymbolInfo{Name: "string", Kind: "type"},
 			renameable: false,
 		},
 		{
-			name: "built-in type i32",
-			symbol: &SymbolInfo{Name: "i32", Kind: "type"},
+			name:       "built-in type i32",
+			symbol:     &SymbolInfo{Name: "i32", Kind: "type"},
 			renameable: false,
 		},
 		{
-			name: "keyword struct",
-			symbol: &SymbolInfo{Name: "struct", Kind: "keyword"},
+			name:       "keyword struct",
+			symbol:     &SymbolInfo{Name: "struct", Kind: "keyword"},
 			renameable: false,
 		},
 		{
-			name: "keyword service",
-			symbol: &SymbolInfo{Name: "service", Kind: "keyword"},
+			name:       "keyword service",
+			symbol:     &SymbolInfo{Name: "service", Kind: "keyword"},
 			renameable: false,
 		},
 		{
-			name: "user field",
-			symbol: &SymbolInfo{Name: "userId", Kind: "field"},
+			name:       "user field",
+			symbol:     &SymbolInfo{Name: "userId", Kind: "field"},
 			renameable: true,
 		},
 		{
-			name: "user method",
-			symbol: &SymbolInfo{Name: "getUser", Kind: "method"},
+			name:       "user method",
+			symbol:     &SymbolInfo{Name: "getUser", Kind: "method"},
 			renameable: true,
 		},
 		{
-			name: "user constant",
-			symbol: &SymbolInfo{Name: "MAX_SIZE", Kind: "constant"},
+			name:       "user constant",
+			symbol:     &SymbolInfo{Name: "MAX_SIZE", Kind: "constant"},
 			renameable: true,
 		},
 		{
-			name: "nil symbol",
-			symbol: nil,
+			name:       "nil symbol",
+			symbol:     nil,
 			renameable: false,
 		},
 	}
@@ -109,14 +109,14 @@ func TestRenameProviderIsRenameable(t *testing.T) {
 
 func TestRenameProviderCheckConflicts(t *testing.T) {
 	provider := NewRenameProvider()
-	
+
 	// Test basic conflict detection (same name)
 	symbol := &SymbolInfo{Name: "User", Kind: "struct"}
 	err := provider.checkConflicts(symbol, "User", nil)
 	if err == nil {
 		t.Error("Expected error when renaming to same name")
 	}
-	
+
 	// Test valid rename (different name)
 	err = provider.checkConflicts(symbol, "Person", nil)
 	if err != nil {
@@ -127,9 +127,9 @@ func TestRenameProviderCheckConflicts(t *testing.T) {
 func TestSymbolInfoCreation(t *testing.T) {
 	// Test creating SymbolInfo with different properties
 	testCases := []struct {
-		name    string
-		symbol  SymbolInfo
-		valid   bool
+		name   string
+		symbol SymbolInfo
+		valid  bool
 	}{
 		{
 			name: "struct symbol",
@@ -185,7 +185,7 @@ func TestRenameProviderCreation(t *testing.T) {
 	if provider == nil {
 		t.Error("NewRenameProvider should return a valid provider")
 	}
-	
+
 	if provider.referencesProvider == nil {
 		t.Error("RenameProvider should have a references provider")
 	}
@@ -193,7 +193,7 @@ func TestRenameProviderCreation(t *testing.T) {
 
 func TestValidationEdgeCases(t *testing.T) {
 	provider := NewRenameProvider()
-	
+
 	// Test edge cases for name validation
 	testCases := []struct {
 		name    string
@@ -201,7 +201,7 @@ func TestValidationEdgeCases(t *testing.T) {
 		valid   bool
 	}{
 		{"underscore only", "_", true},
-		{"underscore start", "_user", true},  
+		{"underscore start", "_user", true},
 		{"single letter", "a", true},
 		{"all caps", "USER", true},
 		{"mixed case", "UsErNaMe", true},
@@ -210,7 +210,7 @@ func TestValidationEdgeCases(t *testing.T) {
 		{"tab character", "user\t", false},
 		{"newline character", "user\n", false},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := provider.validateNewName(tc.newName)

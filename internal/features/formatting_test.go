@@ -130,7 +130,7 @@ void updateUser(1:User user   )
 	if containsSubstring(formatted, " )") {
 		t.Error("Expected spaces before closing parentheses to be trimmed")
 	}
-	
+
 	// Check proper indentation
 	if !containsSubstring(formatted, "    User getUser(") {
 		t.Error("Expected proper indentation for method")

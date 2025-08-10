@@ -209,7 +209,7 @@ const string user_name = "test"`
 	for _, diagnostic := range diagnostics {
 		if diagnostic.Severity != nil && *diagnostic.Severity == protocol.DiagnosticSeverityWarning {
 			if strings.Contains(diagnostic.Message, "should follow PascalCase") ||
-			   strings.Contains(diagnostic.Message, "should follow UPPER_SNAKE_CASE") {
+				strings.Contains(diagnostic.Message, "should follow UPPER_SNAKE_CASE") {
 				namingWarnings = append(namingWarnings, diagnostic)
 			}
 		}

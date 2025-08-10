@@ -21,7 +21,7 @@ func TestSemanticTokensProvider(t *testing.T) {
 func TestSemanticTokensLegend(t *testing.T) {
 	provider := NewSemanticTokensProvider()
 	legend := provider.GetLegend()
-	
+
 	// Verify we have expected token types
 	expectedTypes := []string{"keyword", "string", "number", "comment", "type", "class", "function"}
 	for _, expectedType := range expectedTypes {
@@ -36,7 +36,7 @@ func TestSemanticTokensLegend(t *testing.T) {
 			t.Errorf("Expected token type '%s' not found in legend", expectedType)
 		}
 	}
-	
+
 	// Verify we have expected modifiers
 	expectedModifiers := []string{"declaration", "definition", "readonly"}
 	for _, expectedModifier := range expectedModifiers {
@@ -55,7 +55,7 @@ func TestSemanticTokensLegend(t *testing.T) {
 
 func TestSemanticTokensForSimpleFrugal(t *testing.T) {
 	provider := NewSemanticTokensProvider()
-	
+
 	content := `struct User {
     1: string name,
     2: i32 id
@@ -94,7 +94,7 @@ service UserService {
 
 func TestSemanticTokensWithKeywords(t *testing.T) {
 	provider := NewSemanticTokensProvider()
-	
+
 	content := `include "common.frugal"
 namespace go example
 
@@ -154,7 +154,7 @@ scope Events prefix "user" {
 
 func TestSemanticTokensRange(t *testing.T) {
 	provider := NewSemanticTokensProvider()
-	
+
 	content := `struct User {
     1: string name
 }`
@@ -170,7 +170,7 @@ func TestSemanticTokensRange(t *testing.T) {
 		Start: protocol.Position{Line: 0, Character: 0},
 		End:   protocol.Position{Line: 2, Character: 1},
 	}
-	
+
 	tokens, err := provider.ProvideSemanticTokensRange(doc, rang)
 	if err != nil {
 		t.Fatalf("ProvideSemanticTokensRange failed: %v", err)
@@ -201,7 +201,7 @@ func createTestDocumentForSemanticTokens(uri, content string) (*document.Documen
 
 	// Extract path from URI for proper validation
 	path := strings.TrimPrefix(uri, "file://")
-	
+
 	doc := &document.Document{
 		URI:         uri,
 		Path:        path,

@@ -30,7 +30,7 @@ func createTestDocumentForDefinition(uri, content string) (*document.Document, e
 
 	// Extract path from URI for proper validation
 	path := strings.TrimPrefix(uri, "file://")
-	
+
 	doc := &document.Document{
 		URI:         uri,
 		Path:        path,
@@ -354,7 +354,7 @@ service UserService {
 	if len(locations) > 1 {
 		t.Errorf("Expected exactly 1 definition location, got %d duplicates:", len(locations))
 		for i, loc := range locations {
-			t.Errorf("  Location %d: URI=%s, Line=%d, Char=%d-%d", 
+			t.Errorf("  Location %d: URI=%s, Line=%d, Char=%d-%d",
 				i, loc.URI, loc.Range.Start.Line, loc.Range.Start.Character, loc.Range.End.Character)
 		}
 	}
@@ -399,7 +399,7 @@ func TestDeduplicateLocations(t *testing.T) {
 	if len(deduplicated) != 2 {
 		t.Errorf("Expected 2 unique locations after deduplication, got %d", len(deduplicated))
 		for i, loc := range deduplicated {
-			t.Errorf("  Location %d: Line=%d, Char=%d-%d", 
+			t.Errorf("  Location %d: Line=%d, Char=%d-%d",
 				i, loc.Range.Start.Line, loc.Range.Start.Character, loc.Range.End.Character)
 		}
 	}

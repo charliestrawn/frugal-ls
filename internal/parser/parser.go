@@ -3,8 +3,8 @@ package parser
 import (
 	"fmt"
 
-	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 	tree_sitter_frugal "github.com/charliestrawn/tree-sitter-frugal/bindings/go"
+	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 )
 
 // TreeSitterParser wraps the tree-sitter parser for Frugal files

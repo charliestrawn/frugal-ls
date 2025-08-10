@@ -31,7 +31,7 @@ func createTestDocumentForCompletion(uri, content string) (*document.Document, e
 
 	// Extract path from URI for proper validation
 	path := strings.TrimPrefix(uri, "file://")
-	
+
 	doc := &document.Document{
 		URI:         uri,
 		Path:        path,
@@ -330,28 +330,28 @@ func TestCompletionPositionHandling(t *testing.T) {
 	defer doc.ParseResult.Close()
 
 	testCases := []struct {
-		name     string
-		position protocol.Position
+		name          string
+		position      protocol.Position
 		shouldSucceed bool
 	}{
 		{
-			name:     "valid position",
-			position: protocol.Position{Line: 0, Character: 0},
+			name:          "valid position",
+			position:      protocol.Position{Line: 0, Character: 0},
 			shouldSucceed: true,
 		},
 		{
-			name:     "end of line",
-			position: protocol.Position{Line: 0, Character: 12}, // End of "struct User {"
+			name:          "end of line",
+			position:      protocol.Position{Line: 0, Character: 12}, // End of "struct User {"
 			shouldSucceed: true,
 		},
 		{
-			name:     "beyond last line",
-			position: protocol.Position{Line: 10, Character: 0},
+			name:          "beyond last line",
+			position:      protocol.Position{Line: 10, Character: 0},
 			shouldSucceed: true, // Should handle gracefully - return empty list
 		},
 		{
-			name:     "beyond line end", 
-			position: protocol.Position{Line: 0, Character: 1000},
+			name:          "beyond line end",
+			position:      protocol.Position{Line: 0, Character: 1000},
 			shouldSucceed: true, // Should handle gracefully
 		},
 	}
@@ -359,7 +359,7 @@ func TestCompletionPositionHandling(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			completions, err := provider.ProvideCompletion(doc, tc.position)
-			
+
 			if tc.shouldSucceed {
 				if err != nil {
 					t.Errorf("Completion should succeed but got error: %v", err)

@@ -16,16 +16,16 @@ import (
 type IncludeResolver struct {
 	// Map from document URI to its dependencies (files it includes)
 	dependencies map[string][]string
-	
+
 	// Map from document URI to its dependents (files that include it)
 	dependents map[string][]string
-	
+
 	// Map from include path to resolved file URI
 	includeCache map[string]string
-	
+
 	// Workspace root paths for resolving relative includes
 	workspaceRoots []string
-	
+
 	mutex sync.RWMutex
 }
 
@@ -43,16 +43,16 @@ func NewIncludeResolver(workspaceRoots []string) *IncludeResolver {
 func (r *IncludeResolver) UpdateDocument(doc *document.Document) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	
+
 	// Clear existing dependencies for this document
 	r.clearDependencies(doc.URI)
-	
+
 	// Extract includes from the document
 	includes := r.extractIncludes(doc)
 	if len(includes) == 0 {
 		return nil
 	}
-	
+
 	// Resolve include paths to actual file URIs
 	var resolvedDependencies []string
 	for _, includePath := range includes {
@@ -63,7 +63,7 @@ func (r *IncludeResolver) UpdateDocument(doc *document.Document) error {
 		}
 		resolvedDependencies = append(resolvedDependencies, resolvedURI)
 	}
-	
+
 	// Update dependency mappings
 	r.dependencies[doc.URI] = resolvedDependencies
 	for _, depURI := range resolvedDependencies {
@@ -72,7 +72,7 @@ func (r *IncludeResolver) UpdateDocument(doc *document.Document) error {
 		}
 		r.dependents[depURI] = append(r.dependents[depURI], doc.URI)
 	}
-	
+
 	return nil
 }
 
@@ -80,9 +80,9 @@ func (r *IncludeResolver) UpdateDocument(doc *document.Document) error {
 func (r *IncludeResolver) RemoveDocument(uri string) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	
+
 	r.clearDependencies(uri)
-	
+
 	// Remove this document from all dependents lists
 	for depURI, dependentsList := range r.dependents {
 		r.dependents[depURI] = r.removeFromSlice(dependentsList, uri)
@@ -96,7 +96,7 @@ func (r *IncludeResolver) RemoveDocument(uri string) {
 func (r *IncludeResolver) GetDependencies(uri string) []string {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	
+
 	deps := r.dependencies[uri]
 	result := make([]string, len(deps))
 	copy(result, deps)
@@ -107,7 +107,7 @@ func (r *IncludeResolver) GetDependencies(uri string) []string {
 func (r *IncludeResolver) GetDependents(uri string) []string {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	
+
 	deps := r.dependents[uri]
 	result := make([]string, len(deps))
 	copy(result, deps)
@@ -118,7 +118,7 @@ func (r *IncludeResolver) GetDependents(uri string) []string {
 func (r *IncludeResolver) GetAllSymbols(doc *document.Document, docManager *document.Manager) []ast.Symbol {
 	var allSymbols []ast.Symbol
 	visited := make(map[string]bool)
-	
+
 	r.collectSymbolsRecursive(doc.URI, docManager, &allSymbols, visited)
 	return allSymbols
 }
@@ -127,7 +127,7 @@ func (r *IncludeResolver) GetAllSymbols(doc *document.Document, docManager *docu
 func (r *IncludeResolver) HasCircularDependency(fromURI, toURI string) bool {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	
+
 	visited := make(map[string]bool)
 	return r.hasCircularDependencyRecursive(toURI, fromURI, visited)
 }
@@ -137,10 +137,10 @@ func (r *IncludeResolver) extractIncludes(doc *document.Document) []string {
 	if doc.ParseResult == nil || doc.ParseResult.GetRootNode() == nil {
 		return nil
 	}
-	
+
 	var includes []string
 	root := doc.ParseResult.GetRootNode()
-	
+
 	r.findIncludesRecursive(root, doc.Content, &includes)
 	return includes
 }
@@ -150,7 +150,7 @@ func (r *IncludeResolver) findIncludesRecursive(node *tree_sitter.Node, source [
 	if node == nil {
 		return
 	}
-	
+
 	if node.Kind() == "include" {
 		// Find the string literal in the include statement
 		childCount := node.ChildCount()
@@ -167,7 +167,7 @@ func (r *IncludeResolver) findIncludesRecursive(node *tree_sitter.Node, source [
 			}
 		}
 	}
-	
+
 	// Recursively search child nodes
 	childCount := node.ChildCount()
 	for i := uint(0); i < childCount; i++ {
@@ -183,39 +183,39 @@ func (r *IncludeResolver) resolveIncludePath(includePath, fromURI string) (strin
 	if resolvedURI, exists := r.includeCache[cacheKey]; exists {
 		return resolvedURI, nil
 	}
-	
+
 	// Parse the source URI to get its directory
 	fromPath, err := uriToPath(fromURI)
 	if err != nil {
 		return "", fmt.Errorf("invalid source URI: %w", err)
 	}
-	
+
 	fromDir := filepath.Dir(fromPath)
-	
+
 	// Try resolving relative to the source file
 	candidates := []string{
 		filepath.Join(fromDir, includePath),
 	}
-	
+
 	// Also try resolving relative to workspace roots
 	for _, root := range r.workspaceRoots {
 		candidates = append(candidates, filepath.Join(root, includePath))
 	}
-	
+
 	// Find the first existing file
 	for _, candidate := range candidates {
 		// Clean and normalize the path
 		cleanPath := filepath.Clean(candidate)
-		
+
 		// Convert back to file URI
 		resolvedURI := pathToURI(cleanPath)
-		
+
 		// Cache the result
 		r.includeCache[cacheKey] = resolvedURI
-		
+
 		return resolvedURI, nil
 	}
-	
+
 	return "", fmt.Errorf("could not resolve include path: %s", includePath)
 }
 
@@ -232,7 +232,7 @@ func (r *IncludeResolver) clearDependencies(uri string) {
 			}
 		}
 	}
-	
+
 	// Clear our dependencies
 	delete(r.dependencies, uri)
 }
@@ -254,17 +254,17 @@ func (r *IncludeResolver) collectSymbolsRecursive(uri string, docManager *docume
 		return // Avoid infinite recursion
 	}
 	visited[uri] = true
-	
+
 	// Get document and its symbols
 	if doc, exists := docManager.GetDocument(uri); exists {
 		symbols := doc.GetSymbols()
 		*allSymbols = append(*allSymbols, symbols...)
-		
+
 		// Recursively collect from dependencies
 		r.mutex.RLock()
 		deps := r.dependencies[uri]
 		r.mutex.RUnlock()
-		
+
 		for _, depURI := range deps {
 			r.collectSymbolsRecursive(depURI, docManager, allSymbols, visited)
 		}
@@ -276,12 +276,12 @@ func (r *IncludeResolver) hasCircularDependencyRecursive(currentURI, targetURI s
 	if currentURI == targetURI {
 		return true
 	}
-	
+
 	if visited[currentURI] {
 		return false // Already checked this path
 	}
 	visited[currentURI] = true
-	
+
 	// Check dependencies of current URI
 	deps := r.dependencies[currentURI]
 	for _, depURI := range deps {
@@ -289,7 +289,7 @@ func (r *IncludeResolver) hasCircularDependencyRecursive(currentURI, targetURI s
 			return true
 		}
 	}
-	
+
 	return false
 }
 

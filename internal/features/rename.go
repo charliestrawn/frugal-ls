@@ -80,14 +80,14 @@ func (r *RenameProvider) Rename(doc *document.Document, position protocol.Positi
 
 	// Create workspace edit with text changes
 	changes := make(map[string][]protocol.TextEdit)
-	
+
 	for _, location := range references {
 		uri := location.URI
 		textEdit := protocol.TextEdit{
 			Range:   location.Range,
 			NewText: newName,
 		}
-		
+
 		if _, exists := changes[uri]; !exists {
 			changes[uri] = []protocol.TextEdit{}
 		}
@@ -103,10 +103,10 @@ func (r *RenameProvider) Rename(doc *document.Document, position protocol.Positi
 
 // SymbolInfo represents information about a symbol found at a position
 type SymbolInfo struct {
-	Name     string
-	Kind     string
-	Range    protocol.Range
-	Context  string // Additional context like parent struct/service
+	Name    string
+	Kind    string
+	Range   protocol.Range
+	Context string // Additional context like parent struct/service
 }
 
 // findSymbolAt finds the symbol at the given position
@@ -174,7 +174,7 @@ func (r *RenameProvider) extractSymbolInfo(node *tree_sitter.Node, source []byte
 	}
 
 	nodeType := node.Kind()
-	
+
 	// Handle different node types that can be renamed
 	switch nodeType {
 	case "identifier":
@@ -306,7 +306,7 @@ func (r *RenameProvider) extractTypeInfo(node *tree_sitter.Node, source []byte) 
 	name := ast.GetText(node, source)
 	startPos := node.StartPosition()
 	endPos := node.EndPosition()
-	
+
 	return &SymbolInfo{
 		Name: name,
 		Kind: "type_reference",
@@ -323,7 +323,7 @@ func (r *RenameProvider) isTypeReference(node *tree_sitter.Node) bool {
 	if node == nil {
 		return false
 	}
-	
+
 	nodeType := node.Kind()
 	return nodeType == "field_type" || nodeType == "return_type" || nodeType == "type_reference"
 }
@@ -398,7 +398,7 @@ func (r *RenameProvider) checkConflicts(symbol *SymbolInfo, newName string, allD
 	// 1. Same-scope naming conflicts (e.g., two structs with same name)
 	// 2. Cross-file dependencies and conflicts
 	// 3. Scope-specific rules (e.g., field names within a struct)
-	
+
 	// Basic check: ensure we're not renaming to the same name
 	if symbol.Name == newName {
 		return fmt.Errorf("new name '%s' is the same as current name", newName)

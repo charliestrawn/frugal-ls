@@ -64,7 +64,7 @@ func (p *DocumentHighlightProvider) getHighlightKind(doc *document.Document, r p
 	// Convert range to byte offset to find the node
 	content := string(doc.Content)
 	lines := strings.Split(content, "\n")
-	
+
 	if int(r.Start.Line) >= len(lines) {
 		return nil
 	}
@@ -84,7 +84,7 @@ func (p *DocumentHighlightProvider) getHighlightKind(doc *document.Document, r p
 
 	// Determine highlight kind based on context
 	context := p.getSymbolContext(node)
-	
+
 	switch context {
 	case "struct", "service", "enum", "exception", "scope":
 		// Type definitions
@@ -126,8 +126,8 @@ func (p *DocumentHighlightProvider) isDeclaration(node *tree_sitter.Node) bool {
 
 	// Check various declaration contexts
 	switch parent.Kind() {
-	case "struct_definition", "service_definition", "enum_definition", 
-		 "exception_definition", "scope_definition", "function_definition":
+	case "struct_definition", "service_definition", "enum_definition",
+		"exception_definition", "scope_definition", "function_definition":
 		// If the identifier is the first child after the keyword, it's likely a declaration
 		childCount := parent.ChildCount()
 		for i := uint(0); i < childCount; i++ {

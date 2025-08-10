@@ -126,7 +126,7 @@ func (d *DiagnosticsProvider) checkFieldIdValidation(doc *document.Document, roo
 	// Find all structs, exceptions, and service methods
 	d.walkNodes(root, func(node *tree_sitter.Node) {
 		nodeType := node.Kind()
-		
+
 		if nodeType == "struct_definition" || nodeType == "exception_definition" {
 			diagnostics = append(diagnostics, d.validateStructFields(doc, node)...)
 		} else if nodeType == "function_definition" {
@@ -332,7 +332,7 @@ func (d *DiagnosticsProvider) checkUnusedImports(doc *document.Document, root *t
 
 	// For now, just check if includes exist - full cross-file analysis would be more complex
 	// This is a placeholder for future enhancement
-	
+
 	return diagnostics
 }
 
@@ -456,13 +456,13 @@ func (d *DiagnosticsProvider) walkNodes(node *tree_sitter.Node, callback func(*t
 // findAllNodes finds all nodes of a specific type
 func (d *DiagnosticsProvider) findAllNodes(root *tree_sitter.Node, nodeType string) []*tree_sitter.Node {
 	var nodes []*tree_sitter.Node
-	
+
 	d.walkNodes(root, func(node *tree_sitter.Node) {
 		if node.Kind() == nodeType {
 			nodes = append(nodes, node)
 		}
 	})
-	
+
 	return nodes
 }
 
@@ -537,7 +537,7 @@ func (d *DiagnosticsProvider) extractTypeName(typeNode *tree_sitter.Node, conten
 	if identifier := ast.FindNodeByType(typeNode, "identifier"); identifier != nil {
 		return ast.GetText(identifier, content)
 	}
-	
+
 	if baseType := ast.FindNodeByType(typeNode, "base_type"); baseType != nil {
 		return ast.GetText(baseType, content)
 	}
@@ -554,7 +554,7 @@ func (d *DiagnosticsProvider) isContainerType(typeNode *tree_sitter.Node) bool {
 func (d *DiagnosticsProvider) nodeToRange(node *tree_sitter.Node, content []byte) protocol.Range {
 	startByte := node.StartByte()
 	endByte := node.EndByte()
-	
+
 	// Convert byte offsets to line/column positions
 	startPos := d.byteOffsetToPosition(content, uint32(startByte))
 	endPos := d.byteOffsetToPosition(content, uint32(endByte))
@@ -569,7 +569,7 @@ func (d *DiagnosticsProvider) nodeToRange(node *tree_sitter.Node, content []byte
 func (d *DiagnosticsProvider) byteOffsetToPosition(content []byte, offset uint32) protocol.Position {
 	line := uint32(0)
 	col := uint32(0)
-	
+
 	for i := uint32(0); i < offset && i < uint32(len(content)); i++ {
 		if content[i] == '\n' {
 			line++
@@ -578,7 +578,7 @@ func (d *DiagnosticsProvider) byteOffsetToPosition(content []byte, offset uint32
 			col++
 		}
 	}
-	
+
 	return protocol.Position{
 		Line:      line,
 		Character: col,
@@ -592,17 +592,17 @@ func (d *DiagnosticsProvider) isPascalCase(s string) bool {
 	if len(s) == 0 {
 		return false
 	}
-	
+
 	// First character must be uppercase
 	if s[0] < 'A' || s[0] > 'Z' {
 		return false
 	}
-	
+
 	// No underscores or spaces allowed
 	if strings.Contains(s, "_") || strings.Contains(s, " ") {
 		return false
 	}
-	
+
 	// Must contain at least one lowercase letter (not all uppercase)
 	hasLowercase := false
 	for _, r := range s {
@@ -611,7 +611,7 @@ func (d *DiagnosticsProvider) isPascalCase(s string) bool {
 			break
 		}
 	}
-	
+
 	return hasLowercase
 }
 
@@ -620,7 +620,7 @@ func (d *DiagnosticsProvider) isUpperSnakeCase(s string) bool {
 	if len(s) == 0 {
 		return false
 	}
-	
+
 	prevWasUnderscore := false
 	for i, r := range s {
 		if r >= 'a' && r <= 'z' {
@@ -644,6 +644,6 @@ func (d *DiagnosticsProvider) isUpperSnakeCase(s string) bool {
 		}
 		return false // Other characters not allowed
 	}
-	
+
 	return true
 }

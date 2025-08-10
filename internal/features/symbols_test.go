@@ -27,11 +27,11 @@ func TestProvideDocumentSymbolsEmpty(t *testing.T) {
 
 	provider := NewDocumentSymbolProvider()
 	symbols, err := provider.ProvideDocumentSymbols(doc)
-	
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	if symbols != nil {
 		t.Errorf("Expected nil symbols for empty document, got %v", symbols)
 	}
@@ -68,11 +68,11 @@ func TestProvideDocumentSymbolsBasic(t *testing.T) {
 
 	provider := NewDocumentSymbolProvider()
 	symbols, err := provider.ProvideDocumentSymbols(doc)
-	
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	if len(symbols) != 2 {
 		t.Fatalf("Expected 2 symbols, got %d", len(symbols))
 	}
@@ -98,14 +98,14 @@ func TestProvideDocumentSymbolsBasic(t *testing.T) {
 
 func TestProvideWorkspaceSymbolsEmpty(t *testing.T) {
 	documents := make(map[string]*document.Document)
-	
+
 	provider := NewDocumentSymbolProvider()
 	symbols, err := provider.ProvideWorkspaceSymbols("", documents)
-	
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	if len(symbols) != 0 {
 		t.Errorf("Expected 0 symbols for empty workspace, got %d", len(symbols))
 	}
@@ -123,7 +123,7 @@ func TestProvideWorkspaceSymbolsBasic(t *testing.T) {
 			EndPos:   30,
 		},
 	}
-	
+
 	mockSymbols2 := []ast.Symbol{
 		{
 			Name:     "UserService",
@@ -151,14 +151,14 @@ func TestProvideWorkspaceSymbolsBasic(t *testing.T) {
 			Symbols: mockSymbols2,
 		},
 	}
-	
+
 	provider := NewDocumentSymbolProvider()
 	symbols, err := provider.ProvideWorkspaceSymbols("", documents)
-	
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	if len(symbols) != 2 {
 		t.Fatalf("Expected 2 symbols, got %d", len(symbols))
 	}
@@ -168,7 +168,7 @@ func TestProvideWorkspaceSymbolsBasic(t *testing.T) {
 	for _, symbol := range symbols {
 		foundNames[symbol.Name] = true
 	}
-	
+
 	if !foundNames["User"] {
 		t.Error("Expected to find User symbol in workspace")
 	}
@@ -214,16 +214,16 @@ func TestProvideWorkspaceSymbolsWithQuery(t *testing.T) {
 			Symbols: mockSymbols,
 		},
 	}
-	
+
 	provider := NewDocumentSymbolProvider()
-	
+
 	// Query for "User" - should match "User" and "UserService"
 	symbols, err := provider.ProvideWorkspaceSymbols("User", documents)
-	
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	if len(symbols) != 2 {
 		t.Fatalf("Expected 2 symbols matching 'User', got %d", len(symbols))
 	}
@@ -232,7 +232,7 @@ func TestProvideWorkspaceSymbolsWithQuery(t *testing.T) {
 	for _, symbol := range symbols {
 		foundNames[symbol.Name] = true
 	}
-	
+
 	if !foundNames["User"] {
 		t.Error("Expected to find User symbol")
 	}
@@ -272,19 +272,19 @@ func TestProvideWorkspaceSymbolsSkipInvalidFiles(t *testing.T) {
 			Symbols: mockSymbols, // Has symbols but should be skipped
 		},
 	}
-	
+
 	provider := NewDocumentSymbolProvider()
 	symbols, err := provider.ProvideWorkspaceSymbols("", documents)
-	
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	// Should only find symbol from valid .frugal file
 	if len(symbols) != 1 {
 		t.Fatalf("Expected 1 symbol (skipping invalid file), got %d", len(symbols))
 	}
-	
+
 	if symbols[0].Name != "User" {
 		t.Errorf("Expected User symbol, got %q", symbols[0].Name)
 	}
@@ -292,7 +292,7 @@ func TestProvideWorkspaceSymbolsSkipInvalidFiles(t *testing.T) {
 
 func TestConvertToDocumentSymbolAllTypes(t *testing.T) {
 	provider := NewDocumentSymbolProvider()
-	
+
 	testCases := []struct {
 		symbolType   ast.NodeType
 		expectedKind protocol.SymbolKind
@@ -305,10 +305,10 @@ func TestConvertToDocumentSymbolAllTypes(t *testing.T) {
 		{ast.NodeTypeTypedef, protocol.SymbolKindTypeParameter},
 		{ast.NodeTypeScope, protocol.SymbolKindClass},
 		{ast.NodeTypeMethod, protocol.SymbolKindVariable}, // Falls back to default
-		{ast.NodeTypeField, protocol.SymbolKindVariable}, // Falls back to default
-		{ast.NodeTypeEvent, protocol.SymbolKindVariable}, // Falls back to default
+		{ast.NodeTypeField, protocol.SymbolKindVariable},  // Falls back to default
+		{ast.NodeTypeEvent, protocol.SymbolKindVariable},  // Falls back to default
 	}
-	
+
 	content := []byte("test content for symbol conversion")
 	doc := &document.Document{
 		URI:     "file:///test.frugal",
@@ -316,7 +316,7 @@ func TestConvertToDocumentSymbolAllTypes(t *testing.T) {
 		Content: content,
 		Version: 1,
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(string(tc.symbolType), func(t *testing.T) {
 			symbol := ast.Symbol{
@@ -327,13 +327,13 @@ func TestConvertToDocumentSymbolAllTypes(t *testing.T) {
 				StartPos: 0,
 				EndPos:   10,
 			}
-			
+
 			docSymbol := provider.convertToDocumentSymbol(symbol, doc)
-			
+
 			if docSymbol.Kind != tc.expectedKind {
 				t.Errorf("Expected symbol kind %v for type %s, got %v", tc.expectedKind, tc.symbolType, docSymbol.Kind)
 			}
-			
+
 			if docSymbol.Name != "TestSymbol" {
 				t.Errorf("Expected symbol name 'TestSymbol', got %q", docSymbol.Name)
 			}
@@ -343,7 +343,7 @@ func TestConvertToDocumentSymbolAllTypes(t *testing.T) {
 
 func TestSymbolRangeCalculation(t *testing.T) {
 	provider := NewDocumentSymbolProvider()
-	
+
 	symbol := ast.Symbol{
 		Name:     "TestStruct",
 		Type:     ast.NodeTypeStruct,
@@ -352,28 +352,28 @@ func TestSymbolRangeCalculation(t *testing.T) {
 		StartPos: 100,
 		EndPos:   150,
 	}
-	
+
 	doc := &document.Document{
 		URI:     "file:///test.frugal",
 		Path:    "/test.frugal",
 		Content: []byte("test content"),
 		Version: 1,
 	}
-	
+
 	docSymbol := provider.convertToDocumentSymbol(symbol, doc)
-	
+
 	if docSymbol.Name != "TestStruct" {
 		t.Errorf("Expected symbol name 'TestStruct', got %q", docSymbol.Name)
 	}
-	
+
 	if docSymbol.Kind != protocol.SymbolKindStruct {
 		t.Errorf("Expected struct symbol kind, got %v", docSymbol.Kind)
 	}
-	
+
 	if docSymbol.Range.Start.Line != 5 {
 		t.Errorf("Expected line 5, got %d", docSymbol.Range.Start.Line)
 	}
-	
+
 	if docSymbol.Range.Start.Character != 10 {
 		t.Errorf("Expected column 10, got %d", docSymbol.Range.Start.Character)
 	}

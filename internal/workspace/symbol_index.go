@@ -22,12 +22,12 @@ type IndexedSymbol struct {
 
 // SymbolIndex provides fast workspace-wide symbol search
 type SymbolIndex struct {
-	mu            sync.RWMutex
-	symbols       map[string][]IndexedSymbol // URI -> symbols
-	nameIndex     map[string][]IndexedSymbol // lowercased name -> symbols  
-	typeIndex     map[ast.NodeType][]IndexedSymbol // type -> symbols
-	containerIndex map[string][]IndexedSymbol // container name -> symbols
-	version       int64
+	mu             sync.RWMutex
+	symbols        map[string][]IndexedSymbol       // URI -> symbols
+	nameIndex      map[string][]IndexedSymbol       // lowercased name -> symbols
+	typeIndex      map[ast.NodeType][]IndexedSymbol // type -> symbols
+	containerIndex map[string][]IndexedSymbol       // container name -> symbols
+	version        int64
 }
 
 // NewSymbolIndex creates a new workspace symbol index
@@ -473,10 +473,10 @@ func (si *SymbolIndex) removeFromContainerIndex(symbol IndexedSymbol) {
 // removeSymbolFromSlice removes a symbol from a slice
 func (si *SymbolIndex) removeSymbolFromSlice(slice []IndexedSymbol, target IndexedSymbol) []IndexedSymbol {
 	for i, symbol := range slice {
-		if symbol.URI == target.URI && 
-		   symbol.Name == target.Name && 
-		   symbol.Line == target.Line && 
-		   symbol.Column == target.Column {
+		if symbol.URI == target.URI &&
+			symbol.Name == target.Name &&
+			symbol.Line == target.Line &&
+			symbol.Column == target.Column {
 			return append(slice[:i], slice[i+1:]...)
 		}
 	}
@@ -567,8 +567,8 @@ func (si *SymbolIndex) symbolMatchesQuery(symbol IndexedSymbol, lowerQuery strin
 	lowerFullName := strings.ToLower(symbol.FullName)
 
 	return strings.Contains(lowerName, lowerQuery) ||
-		   strings.Contains(lowerContainer, lowerQuery) ||
-		   strings.Contains(lowerFullName, lowerQuery)
+		strings.Contains(lowerContainer, lowerQuery) ||
+		strings.Contains(lowerFullName, lowerQuery)
 }
 
 // calculateRelevance calculates search relevance score for a symbol

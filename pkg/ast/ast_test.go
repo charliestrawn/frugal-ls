@@ -953,10 +953,10 @@ service UserService {
 func TestGetTextEdgeCasesExtended(t *testing.T) {
 	// Test with source that has invalid byte positions
 	source := []byte("short")
-	
+
 	// Mock a node with invalid positions (this is theoretical since tree-sitter should not produce these)
 	// But we test the bounds checking in GetText
-	
+
 	// Test GetText with position exactly at source length
 	// This tests the bounds checking logic
 	result := GetText(nil, source)

@@ -21,22 +21,22 @@ func NewCompletionProvider() *CompletionProvider {
 // ProvideCompletion provides completion items for a given position
 func (c *CompletionProvider) ProvideCompletion(doc *document.Document, position protocol.Position) ([]protocol.CompletionItem, error) {
 	completions := make([]protocol.CompletionItem, 0)
-	
+
 	// Get the current line content
 	lines := strings.Split(string(doc.Content), "\n")
 	if int(position.Line) >= len(lines) {
 		return completions, nil // Return empty slice, not nil
 	}
-	
+
 	currentLine := lines[position.Line]
-	
+
 	// Handle character position beyond line length
 	prefixEnd := int(position.Character)
 	if prefixEnd > len(currentLine) {
 		prefixEnd = len(currentLine)
 	}
 	linePrefix := currentLine[:prefixEnd]
-	
+
 	// Get all content up to cursor position for context analysis
 	contentUpToCursor := ""
 	for i := 0; i <= int(position.Line); i++ {
@@ -46,10 +46,10 @@ func (c *CompletionProvider) ProvideCompletion(doc *document.Document, position 
 			contentUpToCursor += linePrefix
 		}
 	}
-	
+
 	// Determine the context and provide appropriate completions
 	context := c.determineCompletionContext(contentUpToCursor)
-	
+
 	switch context {
 	case CompletionContextTopLevel:
 		completions = append(completions, c.getTopLevelCompletions()...)
@@ -69,11 +69,11 @@ func (c *CompletionProvider) ProvideCompletion(doc *document.Document, position 
 		completions = append(completions, c.getKeywordCompletions()...)
 		completions = append(completions, c.getTypeCompletions()...)
 	}
-	
+
 	// Add symbol-based completions (variables, methods, etc.)
 	symbolCompletions := c.getSymbolCompletions(doc, position)
 	completions = append(completions, symbolCompletions...)
-	
+
 	return completions, nil
 }
 
@@ -97,12 +97,12 @@ func (c *CompletionProvider) determineCompletionContext(contentUpToCursor string
 	if len(lines) > 0 {
 		lastLine = strings.TrimSpace(lines[len(lines)-1])
 	}
-	
+
 	// Check for type context (after ':' or parameter lists)
 	if strings.Contains(lastLine, ":") && !strings.HasSuffix(lastLine, ":") {
 		return CompletionContextType
 	}
-	
+
 	// Check if we're on the same line as a declaration (scope without braces yet)
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -110,31 +110,31 @@ func (c *CompletionProvider) determineCompletionContext(contentUpToCursor string
 			return CompletionContextScope
 		}
 	}
-	
+
 	// Count braces to determine if we're inside a block
 	openBraces := strings.Count(contentUpToCursor, "{")
 	closeBraces := strings.Count(contentUpToCursor, "}")
-	
+
 	// If we're not inside any block
 	if openBraces <= closeBraces {
 		return CompletionContextTopLevel
 	}
-	
+
 	// We're inside a block - determine which type by looking backwards for the most recent declaration
 	reversedLines := make([]string, len(lines))
 	copy(reversedLines, lines)
-	
+
 	// Reverse the slice to search backwards
 	for i := 0; i < len(reversedLines)/2; i++ {
 		j := len(reversedLines) - 1 - i
 		reversedLines[i], reversedLines[j] = reversedLines[j], reversedLines[i]
 	}
-	
+
 	blockDepth := 0
 	for _, line := range reversedLines {
 		// Count braces on this line (in reverse)
 		blockDepth += strings.Count(line, "}") - strings.Count(line, "{")
-		
+
 		// If we've reached the block we're inside of
 		if blockDepth <= 0 && strings.Contains(line, "{") {
 			if strings.Contains(line, "service ") {
@@ -152,7 +152,7 @@ func (c *CompletionProvider) determineCompletionContext(contentUpToCursor string
 			break
 		}
 	}
-	
+
 	// If we're inside a block but couldn't determine the specific type, provide general completions
 	return CompletionContextGeneral
 }
@@ -161,66 +161,66 @@ func (c *CompletionProvider) determineCompletionContext(contentUpToCursor string
 func (c *CompletionProvider) getTopLevelCompletions() []protocol.CompletionItem {
 	return []protocol.CompletionItem{
 		{
-			Label:      "include",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"Include directive"}[0],
-			InsertText: &[]string{"include \"$1\""}[0],
+			Label:            "include",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"Include directive"}[0],
+			InsertText:       &[]string{"include \"$1\""}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 		{
-			Label:      "namespace",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"Namespace declaration"}[0],
-			InsertText: &[]string{"namespace $1 $2"}[0],
+			Label:            "namespace",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"Namespace declaration"}[0],
+			InsertText:       &[]string{"namespace $1 $2"}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 		{
-			Label:      "const",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"Constant declaration"}[0],
-			InsertText: &[]string{"const $1 $2 = $3"}[0],
+			Label:            "const",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"Constant declaration"}[0],
+			InsertText:       &[]string{"const $1 $2 = $3"}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 		{
-			Label:      "typedef",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"Type alias declaration"}[0],
-			InsertText: &[]string{"typedef $1 $2"}[0],
+			Label:            "typedef",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"Type alias declaration"}[0],
+			InsertText:       &[]string{"typedef $1 $2"}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 		{
-			Label:      "struct",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"Struct declaration"}[0],
-			InsertText: &[]string{"struct $1 {\n\t$2\n}"}[0],
+			Label:            "struct",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"Struct declaration"}[0],
+			InsertText:       &[]string{"struct $1 {\n\t$2\n}"}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 		{
-			Label:      "enum",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"Enum declaration"}[0],
-			InsertText: &[]string{"enum $1 {\n\t$2\n}"}[0],
+			Label:            "enum",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"Enum declaration"}[0],
+			InsertText:       &[]string{"enum $1 {\n\t$2\n}"}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 		{
-			Label:      "exception",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"Exception declaration"}[0],
-			InsertText: &[]string{"exception $1 {\n\t$2\n}"}[0],
+			Label:            "exception",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"Exception declaration"}[0],
+			InsertText:       &[]string{"exception $1 {\n\t$2\n}"}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 		{
-			Label:      "service",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"Service declaration"}[0],
-			InsertText: &[]string{"service $1 {\n\t$2\n}"}[0],
+			Label:            "service",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"Service declaration"}[0],
+			InsertText:       &[]string{"service $1 {\n\t$2\n}"}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 		{
-			Label:      "scope",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"Scope declaration (Frugal pub/sub)"}[0],
-			InsertText: &[]string{"scope $1 {\n\t$2\n}"}[0],
+			Label:            "scope",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"Scope declaration (Frugal pub/sub)"}[0],
+			InsertText:       &[]string{"scope $1 {\n\t$2\n}"}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 	}
@@ -230,24 +230,24 @@ func (c *CompletionProvider) getTopLevelCompletions() []protocol.CompletionItem 
 func (c *CompletionProvider) getServiceCompletions() []protocol.CompletionItem {
 	return []protocol.CompletionItem{
 		{
-			Label:      "oneway",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"One-way method (no response)"}[0],
-			InsertText: &[]string{"oneway void $1($2)"}[0],
+			Label:            "oneway",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"One-way method (no response)"}[0],
+			InsertText:       &[]string{"oneway void $1($2)"}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 		{
-			Label:      "throws",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"Exception specification"}[0],
-			InsertText: &[]string{"throws ($1: $2)"}[0],
+			Label:            "throws",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"Exception specification"}[0],
+			InsertText:       &[]string{"throws ($1: $2)"}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 		{
-			Label:      "extends",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"Service inheritance"}[0],
-			InsertText: &[]string{"extends $1"}[0],
+			Label:            "extends",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"Service inheritance"}[0],
+			InsertText:       &[]string{"extends $1"}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 	}
@@ -257,10 +257,10 @@ func (c *CompletionProvider) getServiceCompletions() []protocol.CompletionItem {
 func (c *CompletionProvider) getScopeCompletions() []protocol.CompletionItem {
 	return []protocol.CompletionItem{
 		{
-			Label:      "prefix",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"Topic prefix for pub/sub"}[0],
-			InsertText: &[]string{"prefix \"$1\""}[0],
+			Label:            "prefix",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"Topic prefix for pub/sub"}[0],
+			InsertText:       &[]string{"prefix \"$1\""}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 	}
@@ -303,30 +303,30 @@ func (c *CompletionProvider) getTypeCompletions() []protocol.CompletionItem {
 		{Label: "double", Kind: &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0]},
 		{Label: "string", Kind: &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0]},
 		{Label: "binary", Kind: &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0]},
-		
+
 		// Container types
 		{
-			Label:      "list",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"List container"}[0],
-			InsertText: &[]string{"list<$1>"}[0],
+			Label:            "list",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"List container"}[0],
+			InsertText:       &[]string{"list<$1>"}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 		{
-			Label:      "set",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"Set container"}[0],
-			InsertText: &[]string{"set<$1>"}[0],
+			Label:            "set",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"Set container"}[0],
+			InsertText:       &[]string{"set<$1>"}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
 		{
-			Label:      "map",
-			Kind:       &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
-			Detail:     &[]string{"Map container"}[0],
-			InsertText: &[]string{"map<$1, $2>"}[0],
+			Label:            "map",
+			Kind:             &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
+			Detail:           &[]string{"Map container"}[0],
+			InsertText:       &[]string{"map<$1, $2>"}[0],
 			InsertTextFormat: &[]protocol.InsertTextFormat{protocol.InsertTextFormatSnippet}[0],
 		},
-		
+
 		// Common return type
 		{Label: "void", Kind: &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0]},
 	}
@@ -343,23 +343,23 @@ func (c *CompletionProvider) getKeywordCompletions() []protocol.CompletionItem {
 // getSymbolCompletions returns completions based on symbols in the document
 func (c *CompletionProvider) getSymbolCompletions(doc *document.Document, position protocol.Position) []protocol.CompletionItem {
 	var completions []protocol.CompletionItem
-	
+
 	symbols := doc.GetSymbols()
 	for _, symbol := range symbols {
 		// Don't suggest the symbol at the current position
 		if symbol.Line == int(position.Line) {
 			continue
 		}
-		
+
 		var kind protocol.CompletionItemKind
 		var detail string
-		
+
 		switch symbol.Type {
 		case ast.NodeTypeService:
 			kind = protocol.CompletionItemKindClass
 			detail = "Service"
 		case ast.NodeTypeScope:
-			kind = protocol.CompletionItemKindClass  
+			kind = protocol.CompletionItemKindClass
 			detail = "Scope (pub/sub)"
 		case ast.NodeTypeStruct:
 			kind = protocol.CompletionItemKindStruct
@@ -380,29 +380,28 @@ func (c *CompletionProvider) getSymbolCompletions(doc *document.Document, positi
 			kind = protocol.CompletionItemKindVariable
 			detail = "Symbol"
 		}
-		
+
 		completions = append(completions, protocol.CompletionItem{
 			Label:  symbol.Name,
 			Kind:   &kind,
 			Detail: &detail,
 		})
 	}
-	
+
 	return completions
 }
-
 
 // findNodeContainingByte finds the deepest node containing the given byte offset
 func findNodeContainingByte(node *tree_sitter.Node, byteOffset uint) *tree_sitter.Node {
 	if node == nil {
 		return nil
 	}
-	
+
 	// Check if byte offset is within this node's range
 	if byteOffset < node.StartByte() || byteOffset > node.EndByte() {
 		return nil
 	}
-	
+
 	// Check children for a more specific match
 	childCount := node.ChildCount()
 	for i := uint(0); i < childCount; i++ {
@@ -411,7 +410,7 @@ func findNodeContainingByte(node *tree_sitter.Node, byteOffset uint) *tree_sitte
 			return childNode
 		}
 	}
-	
+
 	// No child contains the position, so this node is the deepest match
 	return node
 }

@@ -56,32 +56,32 @@ func NewCodeActionProvider() *CodeActionProvider {
 // ProvideCodeActions provides code actions for a given range and context
 func (c *CodeActionProvider) ProvideCodeActions(doc *document.Document, rng protocol.Range, context protocol.CodeActionContext) ([]protocol.CodeAction, error) {
 	var actions []protocol.CodeAction
-	
+
 	if !doc.IsValidFrugalFile() {
 		return actions, nil
 	}
-	
+
 	// Add quick fixes for diagnostics
 	if len(context.Diagnostics) > 0 {
 		quickFixes := c.getQuickFixes(doc, context.Diagnostics)
 		actions = append(actions, quickFixes...)
 	}
-	
+
 	// Add refactoring actions
 	refactorActions := c.getRefactorActions(doc, rng)
 	actions = append(actions, refactorActions...)
-	
+
 	// Add source actions
 	sourceActions := c.getSourceActions(doc)
 	actions = append(actions, sourceActions...)
-	
+
 	return actions, nil
 }
 
 // getQuickFixes provides quick fixes for diagnostics
 func (c *CodeActionProvider) getQuickFixes(doc *document.Document, diagnostics []protocol.Diagnostic) []protocol.CodeAction {
 	var actions []protocol.CodeAction
-	
+
 	for _, diagnostic := range diagnostics {
 		if diagnostic.Source != nil && *diagnostic.Source == "frugal-ls" {
 			// Handle missing closing parenthesis
@@ -91,7 +91,7 @@ func (c *CodeActionProvider) getQuickFixes(doc *document.Document, diagnostics [
 					actions = append(actions, *action)
 				}
 			}
-			
+
 			// Handle missing semicolon
 			if strings.Contains(diagnostic.Message, "Missing ;") {
 				action := c.createFixMissingSemicolon(doc, diagnostic)
@@ -101,24 +101,24 @@ func (c *CodeActionProvider) getQuickFixes(doc *document.Document, diagnostics [
 			}
 		}
 	}
-	
+
 	return actions
 }
 
 // getRefactorActions provides refactoring actions
 func (c *CodeActionProvider) getRefactorActions(doc *document.Document, rng protocol.Range) []protocol.CodeAction {
 	var actions []protocol.CodeAction
-	
+
 	if doc.ParseResult == nil || doc.ParseResult.GetRootNode() == nil {
 		return actions
 	}
-	
+
 	// Find node at the range
 	node := FindNodeAtPosition(doc.ParseResult.GetRootNode(), doc.Content, uint(rng.Start.Line), uint(rng.Start.Character))
 	if node == nil {
 		return actions
 	}
-	
+
 	// Extract method from service
 	if c.isInServiceBody(node) {
 		action := c.createExtractMethodAction(doc, rng, node)
@@ -126,7 +126,7 @@ func (c *CodeActionProvider) getRefactorActions(doc *document.Document, rng prot
 			actions = append(actions, *action)
 		}
 	}
-	
+
 	// Add field to struct
 	if c.isInStructBody(node) {
 		action := c.createAddFieldAction(doc, rng, node)
@@ -134,7 +134,7 @@ func (c *CodeActionProvider) getRefactorActions(doc *document.Document, rng prot
 			actions = append(actions, *action)
 		}
 	}
-	
+
 	// Extract parameter list to struct
 	if c.isMethodWithMultipleParameters(node) {
 		action := c.createExtractParametersToStructAction(doc, rng, node)
@@ -142,7 +142,7 @@ func (c *CodeActionProvider) getRefactorActions(doc *document.Document, rng prot
 			actions = append(actions, *action)
 		}
 	}
-	
+
 	// Generate constructor for struct
 	if node.Kind() == "struct_definition" {
 		action := c.createGenerateConstructorAction(doc, node)
@@ -150,38 +150,38 @@ func (c *CodeActionProvider) getRefactorActions(doc *document.Document, rng prot
 			actions = append(actions, *action)
 		}
 	}
-	
+
 	return actions
 }
 
 // getSourceActions provides source-level actions
 func (c *CodeActionProvider) getSourceActions(doc *document.Document) []protocol.CodeAction {
 	var actions []protocol.CodeAction
-	
+
 	// Add missing include action
 	missingIncludeAction := c.createAddMissingIncludeAction(doc)
 	if missingIncludeAction != nil {
 		actions = append(actions, *missingIncludeAction)
 	}
-	
+
 	// Organize imports action
 	organizeImportsAction := c.createOrganizeIncludesAction(doc)
 	if organizeImportsAction != nil {
 		actions = append(actions, *organizeImportsAction)
 	}
-	
+
 	// Generate service template
 	generateServiceAction := c.createGenerateServiceAction(doc)
 	if generateServiceAction != nil {
 		actions = append(actions, *generateServiceAction)
 	}
-	
+
 	// Generate scope template
 	generateScopeAction := c.createGenerateScopeAction(doc)
 	if generateScopeAction != nil {
 		actions = append(actions, *generateScopeAction)
 	}
-	
+
 	return actions
 }
 
@@ -193,7 +193,7 @@ func (c *CodeActionProvider) createFixMissingParenthesis(doc *document.Document,
 		Line:      line,
 		Character: diagnostic.Range.End.Character,
 	}
-	
+
 	edit := protocol.TextEdit{
 		Range: protocol.Range{
 			Start: endOfLine,
@@ -201,11 +201,11 @@ func (c *CodeActionProvider) createFixMissingParenthesis(doc *document.Document,
 		},
 		NewText: ")",
 	}
-	
+
 	changes := map[string][]protocol.TextEdit{
 		doc.URI: {edit},
 	}
-	
+
 	kind := protocol.CodeActionKindQuickFix
 	return &protocol.CodeAction{
 		Title: "Add missing closing parenthesis",
@@ -227,11 +227,11 @@ func (c *CodeActionProvider) createFixMissingSemicolon(doc *document.Document, d
 		},
 		NewText: ";",
 	}
-	
+
 	changes := map[string][]protocol.TextEdit{
 		doc.URI: {edit},
 	}
-	
+
 	kind := protocol.CodeActionKindQuickFix
 	return &protocol.CodeAction{
 		Title: "Add missing semicolon",
@@ -247,22 +247,22 @@ func (c *CodeActionProvider) createFixMissingSemicolon(doc *document.Document, d
 func (c *CodeActionProvider) createExtractMethodAction(doc *document.Document, rng protocol.Range, node *tree_sitter.Node) *protocol.CodeAction {
 	// This is a placeholder for method extraction logic
 	// In a real implementation, this would analyze the selected code and extract it into a new method
-	
+
 	methodName := "newMethod"
 	methodSignature := fmt.Sprintf("    void %s() {\n        // Extracted method\n    }", methodName)
-	
+
 	// Find insertion point (end of service body)
 	serviceNode := c.findParentOfType(node, "service_definition")
 	if serviceNode == nil {
 		return nil
 	}
-	
+
 	// Insert at the end of service body
 	insertPosition := protocol.Position{
 		Line:      uint32(serviceNode.EndPosition().Row),
 		Character: 0,
 	}
-	
+
 	edit := protocol.TextEdit{
 		Range: protocol.Range{
 			Start: insertPosition,
@@ -270,11 +270,11 @@ func (c *CodeActionProvider) createExtractMethodAction(doc *document.Document, r
 		},
 		NewText: "\n" + methodSignature,
 	}
-	
+
 	changes := map[string][]protocol.TextEdit{
 		doc.URI: {edit},
 	}
-	
+
 	kind := protocol.CodeActionKindRefactor
 	return &protocol.CodeAction{
 		Title: fmt.Sprintf("Extract method '%s'", methodName),
@@ -291,18 +291,18 @@ func (c *CodeActionProvider) createAddFieldAction(doc *document.Document, rng pr
 	if structNode == nil {
 		return nil
 	}
-	
+
 	// Get next field ID by counting existing fields
 	fieldID := c.getNextFieldID(structNode, doc.Content)
-	
+
 	newField := fmt.Sprintf("\n    %d: optional string newField,", fieldID)
-	
+
 	// Find insertion point (end of struct body)
 	insertPosition := protocol.Position{
 		Line:      uint32(structNode.EndPosition().Row),
 		Character: 0,
 	}
-	
+
 	edit := protocol.TextEdit{
 		Range: protocol.Range{
 			Start: insertPosition,
@@ -310,11 +310,11 @@ func (c *CodeActionProvider) createAddFieldAction(doc *document.Document, rng pr
 		},
 		NewText: newField,
 	}
-	
+
 	changes := map[string][]protocol.TextEdit{
 		doc.URI: {edit},
 	}
-	
+
 	kind := protocol.CodeActionKindRefactor
 	return &protocol.CodeAction{
 		Title: "Add field to struct",
@@ -331,19 +331,19 @@ func (c *CodeActionProvider) createGenerateConstructorAction(doc *document.Docum
 	if structName == "" {
 		return nil
 	}
-	
+
 	constructor := fmt.Sprintf(`
     %s create%s() {
         %s result;
         return result;
     }`, structName, structName, structName)
-	
+
 	// Insert after the struct definition
 	insertPosition := protocol.Position{
 		Line:      uint32(structNode.EndPosition().Row + 1),
 		Character: 0,
 	}
-	
+
 	edit := protocol.TextEdit{
 		Range: protocol.Range{
 			Start: insertPosition,
@@ -351,11 +351,11 @@ func (c *CodeActionProvider) createGenerateConstructorAction(doc *document.Docum
 		},
 		NewText: constructor,
 	}
-	
+
 	changes := map[string][]protocol.TextEdit{
 		doc.URI: {edit},
 	}
-	
+
 	kind := protocol.CodeActionKindSource
 	return &protocol.CodeAction{
 		Title: fmt.Sprintf("Generate constructor for %s", structName),
@@ -370,12 +370,12 @@ func (c *CodeActionProvider) createGenerateConstructorAction(doc *document.Docum
 func (c *CodeActionProvider) createAddMissingIncludeAction(doc *document.Document) *protocol.CodeAction {
 	// This would analyze undefined symbols and suggest includes
 	// For now, we'll provide a generic include template
-	
+
 	includeStatement := "include \"common.frugal\"\n"
-	
+
 	// Insert at the top of the file (after initial comments)
 	insertPosition := protocol.Position{Line: 0, Character: 0}
-	
+
 	edit := protocol.TextEdit{
 		Range: protocol.Range{
 			Start: insertPosition,
@@ -383,11 +383,11 @@ func (c *CodeActionProvider) createAddMissingIncludeAction(doc *document.Documen
 		},
 		NewText: includeStatement,
 	}
-	
+
 	changes := map[string][]protocol.TextEdit{
 		doc.URI: {edit},
 	}
-	
+
 	kind := protocol.CodeActionKindSource
 	return &protocol.CodeAction{
 		Title: "Add common include",
@@ -402,7 +402,7 @@ func (c *CodeActionProvider) createAddMissingIncludeAction(doc *document.Documen
 func (c *CodeActionProvider) createOrganizeIncludesAction(doc *document.Document) *protocol.CodeAction {
 	// This would sort and deduplicate include statements
 	// For now, we'll provide a placeholder
-	
+
 	kind := protocol.CodeActionKindSourceOrganizeImports
 	return &protocol.CodeAction{
 		Title: "Organize includes",
@@ -420,14 +420,14 @@ service ExampleService {
     void doSomething(1: string param) throws (1: Exception error)
 }
 `
-	
+
 	// Insert at the end of the document
 	lines := strings.Split(string(doc.Content), "\n")
 	insertPosition := protocol.Position{
 		Line:      uint32(len(lines)),
 		Character: 0,
 	}
-	
+
 	edit := protocol.TextEdit{
 		Range: protocol.Range{
 			Start: insertPosition,
@@ -435,11 +435,11 @@ service ExampleService {
 		},
 		NewText: serviceTemplate,
 	}
-	
+
 	changes := map[string][]protocol.TextEdit{
 		doc.URI: {edit},
 	}
-	
+
 	kind := protocol.CodeActionKindSource
 	return &protocol.CodeAction{
 		Title: "Generate service template",
@@ -458,14 +458,14 @@ scope ExampleEvents prefix "example" {
     StateChanged: StateInfo
 }
 `
-	
+
 	// Insert at the end of the document
 	lines := strings.Split(string(doc.Content), "\n")
 	insertPosition := protocol.Position{
 		Line:      uint32(len(lines)),
 		Character: 0,
 	}
-	
+
 	edit := protocol.TextEdit{
 		Range: protocol.Range{
 			Start: insertPosition,
@@ -473,11 +473,11 @@ scope ExampleEvents prefix "example" {
 		},
 		NewText: scopeTemplate,
 	}
-	
+
 	changes := map[string][]protocol.TextEdit{
 		doc.URI: {edit},
 	}
-	
+
 	kind := protocol.CodeActionKindSource
 	return &protocol.CodeAction{
 		Title: "Generate scope template",
@@ -529,7 +529,7 @@ func (c *CodeActionProvider) findParentOfType(node *tree_sitter.Node, nodeType s
 // getNextFieldID determines the next field ID for a struct
 func (c *CodeActionProvider) getNextFieldID(structNode *tree_sitter.Node, source []byte) int {
 	maxID := 0
-	
+
 	// Walk through struct body to find existing field IDs
 	c.walkNode(structNode, func(node *tree_sitter.Node) bool {
 		if node.Kind() == "field_id" {
@@ -542,7 +542,7 @@ func (c *CodeActionProvider) getNextFieldID(structNode *tree_sitter.Node, source
 		}
 		return true // Continue walking
 	})
-	
+
 	return maxID + 1
 }
 
@@ -560,11 +560,11 @@ func (c *CodeActionProvider) walkNode(node *tree_sitter.Node, visitor func(*tree
 	if node == nil {
 		return
 	}
-	
+
 	if !visitor(node) {
 		return
 	}
-	
+
 	childCount := node.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := node.Child(i)
@@ -582,7 +582,7 @@ func (c *CodeActionProvider) isMethodWithMultipleParameters(node *tree_sitter.No
 	if functionNode == nil {
 		return false
 	}
-	
+
 	// Count parameters (they are represented as "field" nodes in the first field_list)
 	parameterCount := 0
 	childCount := functionNode.ChildCount()
@@ -600,7 +600,7 @@ func (c *CodeActionProvider) isMethodWithMultipleParameters(node *tree_sitter.No
 			break // Stop after first field_list
 		}
 	}
-	
+
 	return parameterCount >= 2 // Only suggest extraction for 2+ parameters
 }
 
@@ -614,31 +614,31 @@ func (c *CodeActionProvider) createExtractParametersToStructAction(doc *document
 	if functionNode == nil {
 		return nil
 	}
-	
+
 	// Extract method name
 	methodName := c.extractMethodName(functionNode, doc.Content)
 	if methodName == "" {
 		return nil
 	}
-	
+
 	// Extract parameters
 	parameters := c.extractParameters(functionNode, doc.Content)
 	if len(parameters) < 2 {
 		return nil
 	}
-	
+
 	// Generate struct name (e.g., "GetUserRequest")
 	structName := c.generateStructName(methodName)
-	
+
 	// Create struct definition
 	structDef := c.generateParameterStruct(structName, parameters)
-	
+
 	// Create updated method signature
 	updatedMethod := c.generateUpdatedMethodSignature(functionNode, doc.Content, structName)
-	
+
 	// Create edits
 	var edits []protocol.TextEdit
-	
+
 	// Add struct definition before the service
 	serviceNode := c.findParentOfType(functionNode, "service_definition")
 	if serviceNode != nil {
@@ -654,7 +654,7 @@ func (c *CodeActionProvider) createExtractParametersToStructAction(doc *document
 			NewText: structDef + "\n\n",
 		})
 	}
-	
+
 	// Replace method signature
 	methodRange := protocol.Range{
 		Start: protocol.Position{
@@ -666,16 +666,16 @@ func (c *CodeActionProvider) createExtractParametersToStructAction(doc *document
 			Character: uint32(functionNode.EndPosition().Column),
 		},
 	}
-	
+
 	edits = append(edits, protocol.TextEdit{
 		Range:   methodRange,
 		NewText: updatedMethod,
 	})
-	
+
 	changes := map[string][]protocol.TextEdit{
 		doc.URI: edits,
 	}
-	
+
 	kind := protocol.CodeActionKindRefactor
 	return &protocol.CodeAction{
 		Title: fmt.Sprintf("Extract parameters to %s struct", structName),
@@ -709,7 +709,7 @@ func (c *CodeActionProvider) extractMethodName(functionNode *tree_sitter.Node, s
 // extractParameters extracts parameters from a function definition
 func (c *CodeActionProvider) extractParameters(functionNode *tree_sitter.Node, source []byte) []Parameter {
 	var parameters []Parameter
-	
+
 	// Find the first field_list (parameter list), not the throws field_list
 	childCount := functionNode.ChildCount()
 	for i := uint(0); i < childCount; i++ {
@@ -729,19 +729,19 @@ func (c *CodeActionProvider) extractParameters(functionNode *tree_sitter.Node, s
 			break // Stop after first field_list
 		}
 	}
-	
+
 	return parameters
 }
 
 // parseParameter parses a single parameter node (field node in function signature)
 func (c *CodeActionProvider) parseParameter(fieldNode *tree_sitter.Node, source []byte) Parameter {
 	param := Parameter{}
-	
+
 	// Walk through field children to extract ID, type, and name
 	childCount := fieldNode.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := fieldNode.Child(i)
-		
+
 		switch child.Kind() {
 		case "field_id":
 			// Extract the number from field_id (e.g., "1:" -> "1")
@@ -755,7 +755,7 @@ func (c *CodeActionProvider) parseParameter(fieldNode *tree_sitter.Node, source 
 			param.Name = ast.GetText(child, source)
 		}
 	}
-	
+
 	return param
 }
 
@@ -780,8 +780,8 @@ func (c *CodeActionProvider) extractTypeFromBaseType(baseTypeNode *tree_sitter.N
 		child := baseTypeNode.Child(i)
 		childKind := child.Kind()
 		// Look for primitive type nodes
-		if childKind == "string" || childKind == "i64" || childKind == "bool" || 
-		   childKind == "i32" || childKind == "double" || childKind == "byte" {
+		if childKind == "string" || childKind == "i64" || childKind == "bool" ||
+			childKind == "i32" || childKind == "double" || childKind == "byte" {
 			return ast.GetText(child, source)
 		}
 	}
@@ -794,7 +794,7 @@ func (c *CodeActionProvider) generateStructName(methodName string) string {
 	if len(methodName) == 0 {
 		return "Request"
 	}
-	
+
 	capitalized := strings.ToUpper(methodName[:1]) + methodName[1:]
 	return capitalized + "Request"
 }
@@ -802,15 +802,15 @@ func (c *CodeActionProvider) generateStructName(methodName string) string {
 // generateParameterStruct generates the struct definition from parameters
 func (c *CodeActionProvider) generateParameterStruct(structName string, parameters []Parameter) string {
 	var builder strings.Builder
-	
+
 	builder.WriteString(fmt.Sprintf("struct %s {\n", structName))
-	
+
 	for _, param := range parameters {
 		builder.WriteString(fmt.Sprintf("    %s: %s %s,\n", param.ID, param.Type, param.Name))
 	}
-	
+
 	builder.WriteString("}")
-	
+
 	return builder.String()
 }
 
@@ -820,14 +820,14 @@ func (c *CodeActionProvider) generateUpdatedMethodSignature(functionNode *tree_s
 	methodName := c.extractMethodName(functionNode, source)
 	returnType := c.extractReturnType(functionNode, source)
 	throwsClause := c.extractThrowsClause(functionNode, source)
-	
+
 	// Generate new signature
 	signature := fmt.Sprintf("    %s %s(1: %s request)", returnType, methodName, structName)
-	
+
 	if throwsClause != "" {
 		signature += " " + throwsClause
 	}
-	
+
 	return signature
 }
 
@@ -854,7 +854,7 @@ func (c *CodeActionProvider) extractReturnType(functionNode *tree_sitter.Node, s
 			return c.extractTypeFromFieldType(child, source)
 		}
 	}
-	
+
 	return "void" // default
 }
 
@@ -862,15 +862,15 @@ func (c *CodeActionProvider) extractReturnType(functionNode *tree_sitter.Node, s
 func (c *CodeActionProvider) extractThrowsClause(functionNode *tree_sitter.Node, source []byte) string {
 	var throwsClause strings.Builder
 	foundThrows := false
-	
+
 	childCount := functionNode.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := functionNode.Child(i)
-		
+
 		if child.Kind() == "throws" {
 			foundThrows = true
 			throwsClause.WriteString("throws (")
-			
+
 			// Look for the next field_list (throws specifications)
 			for j := i + 1; j < childCount; j++ {
 				nextChild := functionNode.Child(j)
@@ -885,18 +885,18 @@ func (c *CodeActionProvider) extractThrowsClause(functionNode *tree_sitter.Node,
 			break
 		}
 	}
-	
+
 	if !foundThrows {
 		return ""
 	}
-	
+
 	return throwsClause.String()
 }
 
 // extractThrowSpecs extracts throw specifications from a field_list
 func (c *CodeActionProvider) extractThrowSpecs(fieldListNode *tree_sitter.Node, source []byte) string {
 	var specs []string
-	
+
 	fieldCount := fieldListNode.ChildCount()
 	for i := uint(0); i < fieldCount; i++ {
 		field := fieldListNode.Child(i)
@@ -907,18 +907,18 @@ func (c *CodeActionProvider) extractThrowSpecs(fieldListNode *tree_sitter.Node, 
 			}
 		}
 	}
-	
+
 	return strings.Join(specs, ", ")
 }
 
 // extractThrowSpec extracts a single throw specification
 func (c *CodeActionProvider) extractThrowSpec(fieldNode *tree_sitter.Node, source []byte) string {
 	var id, exceptionType, name string
-	
+
 	childCount := fieldNode.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := fieldNode.Child(i)
-		
+
 		switch child.Kind() {
 		case "field_id":
 			id = ast.GetText(child, source)
@@ -928,10 +928,10 @@ func (c *CodeActionProvider) extractThrowSpec(fieldNode *tree_sitter.Node, sourc
 			name = ast.GetText(child, source)
 		}
 	}
-	
+
 	if id != "" && exceptionType != "" && name != "" {
 		return fmt.Sprintf("%s %s %s", id, exceptionType, name)
 	}
-	
+
 	return ""
 }
