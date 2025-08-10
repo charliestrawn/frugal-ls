@@ -162,10 +162,19 @@ func (f *FormattingProvider) formatDocumentConservatively(source []byte, options
 			continue
 		}
 
-		// Handle comments with proper indentation
-		if strings.HasPrefix(trimmedLine, "//") || strings.HasPrefix(trimmedLine, "/*") {
-			formattedLine := strings.Repeat(indentString, indentLevel) + trimmedLine
-			formattedLines = append(formattedLines, formattedLine)
+		// Handle comments - preserve the original comment formatting exactly
+		if strings.HasPrefix(trimmedLine, "//") || strings.HasPrefix(trimmedLine, "/*") || strings.HasPrefix(trimmedLine, "*") || strings.HasPrefix(trimmedLine, "*/") {
+			// For comments at indent level 0, preserve exactly as-is
+			if indentLevel == 0 {
+				formattedLines = append(formattedLines, line)
+			} else {
+				// For nested comments, add base indentation but preserve comment structure
+				baseIndent := strings.Repeat(indentString, indentLevel)
+				// Remove any existing indentation and add the correct base indentation
+				commentContent := strings.TrimLeft(line, " \t")
+				formattedLine := baseIndent + commentContent
+				formattedLines = append(formattedLines, formattedLine)
+			}
 			continue
 		}
 

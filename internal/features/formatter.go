@@ -381,39 +381,39 @@ func (f *FrugalFormatter) formatMultiLineComment(commentText, indent string) str
 	}
 
 	var formattedLines []string
-	
+
 	// First line: should be "/**"
 	firstLine := strings.TrimSpace(lines[0])
 	var firstLineContent string
-	
+
 	if firstLine == "/*" {
 		// Just opening, no content
-		formattedLines = append(formattedLines, indent + "/**")
+		formattedLines = append(formattedLines, indent+"/**")
 	} else if strings.HasPrefix(firstLine, "/**") {
 		// Already starts with /** - check if it has content
 		if len(firstLine) > 3 {
 			// Has content after /** - extract it
 			firstLineContent = strings.TrimSpace(firstLine[3:])
-			formattedLines = append(formattedLines, indent + "/**")
+			formattedLines = append(formattedLines, indent+"/**")
 			if firstLineContent != "" {
-				formattedLines = append(formattedLines, indent + " * " + firstLineContent)
+				formattedLines = append(formattedLines, indent+" * "+firstLineContent)
 			}
 		} else {
 			// Just /** with no content
-			formattedLines = append(formattedLines, indent + "/**")
+			formattedLines = append(formattedLines, indent+"/**")
 		}
 	} else if strings.HasPrefix(firstLine, "/*") {
 		// Has content on first line - extract it
 		firstLineContent = strings.TrimSpace(firstLine[2:]) // Remove "/*"
-		formattedLines = append(formattedLines, indent + "/**")
+		formattedLines = append(formattedLines, indent+"/**")
 		if firstLineContent != "" {
-			formattedLines = append(formattedLines, indent + " * " + firstLineContent)
+			formattedLines = append(formattedLines, indent+" * "+firstLineContent)
 		}
 	} else {
 		// This shouldn't happen in a well-formed comment, but handle it
-		formattedLines = append(formattedLines, indent + "/**")
+		formattedLines = append(formattedLines, indent+"/**")
 		if firstLine != "" {
-			formattedLines = append(formattedLines, indent + " * " + firstLine)
+			formattedLines = append(formattedLines, indent+" * "+firstLine)
 		}
 	}
 
@@ -421,7 +421,7 @@ func (f *FrugalFormatter) formatMultiLineComment(commentText, indent string) str
 	for i := 1; i < len(lines)-1; i++ {
 		line := strings.TrimSpace(lines[i])
 		if line == "" {
-			formattedLines = append(formattedLines, indent + " *")
+			formattedLines = append(formattedLines, indent+" *")
 		} else {
 			// Ensure line starts with " * "
 			if strings.HasPrefix(line, "*") {
@@ -437,14 +437,14 @@ func (f *FrugalFormatter) formatMultiLineComment(commentText, indent string) str
 			if strings.HasPrefix(line, " *") && len(line) > 2 && line[2] != ' ' {
 				line = " * " + line[2:]
 			}
-			formattedLines = append(formattedLines, indent + line)
+			formattedLines = append(formattedLines, indent+line)
 		}
 	}
 
 	// Last line: should be " */"
 	lastLine := strings.TrimSpace(lines[len(lines)-1])
 	if lastLine == "*/" {
-		formattedLines = append(formattedLines, indent + " */")
+		formattedLines = append(formattedLines, indent+" */")
 	} else if strings.HasSuffix(lastLine, "*/") {
 		// Handle case where last line has content and */
 		if len(lastLine) > 2 {
@@ -455,11 +455,11 @@ func (f *FrugalFormatter) formatMultiLineComment(commentText, indent string) str
 					content = strings.TrimSpace(content[1:])
 				}
 				if content != "" {
-					formattedLines = append(formattedLines, indent + " * " + content)
+					formattedLines = append(formattedLines, indent+" * "+content)
 				}
 			}
 		}
-		formattedLines = append(formattedLines, indent + " */")
+		formattedLines = append(formattedLines, indent+" */")
 	} else {
 		// Add the last line content
 		if lastLine != "" {
@@ -468,9 +468,9 @@ func (f *FrugalFormatter) formatMultiLineComment(commentText, indent string) str
 			} else if !strings.HasPrefix(lastLine, " *") {
 				lastLine = " * " + lastLine
 			}
-			formattedLines = append(formattedLines, indent + lastLine)
+			formattedLines = append(formattedLines, indent+lastLine)
 		}
-		formattedLines = append(formattedLines, indent + " */")
+		formattedLines = append(formattedLines, indent+" */")
 	}
 
 	return strings.Join(formattedLines, "\n")
@@ -1060,25 +1060,85 @@ func (f *FrugalFormatter) formatConservatively(node *tree_sitter.Node, source []
 	lines := strings.Split(nodeText, "\n")
 	var formattedLines []string
 
+	inMultiLineComment := false
+	commentStartIndent := 0
+
 	for i, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
 		if trimmedLine == "" {
-			formattedLines = append(formattedLines, "")
+			if inMultiLineComment {
+				// Preserve proper spacing for empty lines in multi-line comments
+				formattedLines = append(formattedLines, strings.Repeat(" ", commentStartIndent)+" *")
+			} else {
+				formattedLines = append(formattedLines, "")
+			}
 			continue
 		}
 
-		// For the first line, use the specified indent level
-		if i == 0 {
-			formattedLines = append(formattedLines, indent+trimmedLine)
-		} else {
-			// For subsequent lines, preserve relative indentation
+		// Check if we're entering a multi-line comment
+		if strings.HasPrefix(trimmedLine, "/*") && strings.Contains(trimmedLine, "*") {
+			inMultiLineComment = true
+			// Calculate the base indent for this comment
 			originalIndent := len(line) - len(strings.TrimLeft(line, " \t"))
-			if originalIndent > 0 {
-				// Preserve relative indentation but start from base indent
-				relativeIndent := f.getIndent(indentLevel + 1)
-				formattedLines = append(formattedLines, relativeIndent+trimmedLine)
+			if i == 0 {
+				commentStartIndent = len(indent)
 			} else {
+				commentStartIndent = originalIndent
+			}
+		}
+
+		// Handle multi-line comment formatting
+		if inMultiLineComment {
+			baseIndent := strings.Repeat(" ", commentStartIndent)
+
+			if strings.HasPrefix(trimmedLine, "/**") {
+				// Opening line
+				formattedLines = append(formattedLines, baseIndent+"/**")
+			} else if strings.HasPrefix(trimmedLine, "/*") && !strings.HasPrefix(trimmedLine, "/**") {
+				// Convert /* to /**
+				content := strings.TrimSpace(trimmedLine[2:])
+				formattedLines = append(formattedLines, baseIndent+"/**")
+				if content != "" && !strings.HasSuffix(content, "*/") {
+					formattedLines = append(formattedLines, baseIndent+" * "+content)
+				}
+			} else if trimmedLine == "*/" {
+				// Closing line
+				formattedLines = append(formattedLines, baseIndent+" */")
+				inMultiLineComment = false
+			} else if strings.HasSuffix(trimmedLine, "*/") {
+				// Content and closing on same line
+				content := strings.TrimSpace(trimmedLine[:len(trimmedLine)-2])
+				if strings.HasPrefix(content, "*") {
+					content = strings.TrimSpace(content[1:])
+				}
+				if content != "" {
+					formattedLines = append(formattedLines, baseIndent+" * "+content)
+				}
+				formattedLines = append(formattedLines, baseIndent+" */")
+				inMultiLineComment = false
+			} else {
+				// Content line
+				content := trimmedLine
+				if strings.HasPrefix(content, "*") {
+					content = strings.TrimSpace(content[1:])
+				}
+				formattedLines = append(formattedLines, baseIndent+" * "+content)
+			}
+		} else {
+			// Regular line formatting
+			// For the first line, use the specified indent level
+			if i == 0 {
 				formattedLines = append(formattedLines, indent+trimmedLine)
+			} else {
+				// For subsequent lines, preserve relative indentation
+				originalIndent := len(line) - len(strings.TrimLeft(line, " \t"))
+				if originalIndent > 0 {
+					// Preserve relative indentation but start from base indent
+					relativeIndent := f.getIndent(indentLevel + 1)
+					formattedLines = append(formattedLines, relativeIndent+trimmedLine)
+				} else {
+					formattedLines = append(formattedLines, indent+trimmedLine)
+				}
 			}
 		}
 	}

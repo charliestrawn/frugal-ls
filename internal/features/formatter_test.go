@@ -323,13 +323,165 @@ service UserService {}`,
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			result := testFormat(t, test.input)
-			
+
 			// Normalize whitespace for comparison
 			result = normalizeWhitespace(result)
 			expected := normalizeWhitespace(test.expected)
-			
+
 			if result != expected {
 				t.Errorf("Multi-line comment formatting failed.\nExpected:\n%s\nGot:\n%s", expected, result)
+			}
+		})
+	}
+}
+
+func TestFormatterCommentsInDefinitions(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name: "multi-line comment in struct",
+			input: `struct User {
+    /**
+     * User ID field
+     * with description
+     */
+    1: i64 id,
+    2: string name
+}`,
+			expected: `struct User {
+    /**
+     * User ID field
+     * with description
+     */
+    1: i64 id,
+    2: string name
+}`,
+		},
+		{
+			name: "mixed comment styles in struct",
+			input: `struct User {
+    /* This comment needs formatting
+       with proper star alignment */
+    1: i64 id
+}`,
+			expected: `struct User {
+    /**
+     * This comment needs formatting
+     * with proper star alignment
+     */
+    1: i64 id
+}`,
+		},
+		{
+			name: "comments in service definition",
+			input: `service UserService {
+    /**
+     * Get user method
+     */
+    User getUser(1: i64 id),
+    
+    /* Update method
+       description */
+    void updateUser(1: User user)
+}`,
+			expected: `service UserService {
+    /**
+     * Get user method
+     */
+    User getUser(1: i64 id),
+
+    /**
+     * Update method
+     * description
+     */
+    void updateUser(1: User user)
+}`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := testFormat(t, test.input)
+
+			// Normalize whitespace for comparison
+			result = normalizeWhitespace(result)
+			expected := normalizeWhitespace(test.expected)
+
+			if result != expected {
+				t.Errorf("Comment in definition formatting failed.\nExpected:\n%s\nGot:\n%s", expected, result)
+			}
+		})
+	}
+}
+
+func TestFormatterSpacePreservation(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name: "preserve spaces in multi-line comments before struct",
+			input: `/**
+ * The IDL provides set, list, and map types for representing collections
+ * of data.  Our Album struct contains a list of Tracks.
+ */
+struct Album {
+    1: i64 id
+}`,
+			expected: `/**
+ * The IDL provides set, list, and map types for representing collections
+ * of data.  Our Album struct contains a list of Tracks.
+ */
+struct Album {
+    1: i64 id
+}`,
+		},
+		{
+			name: "fix star alignment while preserving content spaces",
+			input: `/**
+* The IDL provides set, list, and map types for representing collections
+* of data.  Our Album struct contains a list of Tracks.
+*/
+struct Album {
+    1: i64 id
+}`,
+			expected: `/**
+ * The IDL provides set, list, and map types for representing collections
+ * of data.  Our Album struct contains a list of Tracks.
+ */
+struct Album {
+    1: i64 id
+}`,
+		},
+		{
+			name: "preserve multiple spaces between words",
+			input: `/**
+ * This    comment    has    multiple    spaces    between    words
+ * and should preserve     all    the    spacing
+ */
+struct Test {
+    1: i64 id
+}`,
+			expected: `/**
+ * This    comment    has    multiple    spaces    between    words
+ * and should preserve     all    the    spacing
+ */
+struct Test {
+    1: i64 id
+}`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := testFormat(t, test.input)
+
+			if result != test.expected {
+				t.Errorf("Space preservation failed.\nExpected:\n%s\nGot:\n%s", test.expected, result)
 			}
 		})
 	}
