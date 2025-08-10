@@ -216,7 +216,7 @@ func (s *Server) textDocumentDidChange(context *glsp.Context, params *protocol.D
 		s.symbolIndex.UpdateDocument(doc)
 
 		s.publishDiagnostics(context, doc)
-		
+
 		// Request semantic token refresh to update highlighting
 		if err := s.refreshSemanticTokens(context); err != nil {
 			s.logger.Printf("Error refreshing semantic tokens: %v", err)

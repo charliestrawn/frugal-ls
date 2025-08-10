@@ -335,7 +335,7 @@ struct NewType {
 			Text:       "",
 		},
 	}
-	
+
 	doc2, err := manager.DidOpen(openParams2)
 	if err != nil {
 		t.Fatalf("DidOpen failed for test2: %v", err)
@@ -364,7 +364,7 @@ struct NewType {
 		if err != nil {
 			t.Fatalf("Character-by-character typing failed at char %d (%s): %v", i, char, err)
 		}
-		
+
 		expectedPartial := strings.Join(chars[:i+1], "")
 		if string(doc2.Content) != expectedPartial {
 			t.Errorf("Character-by-character typing failed at step %d.\nExpected: %q\nGot: %q", i, expectedPartial, string(doc2.Content))
