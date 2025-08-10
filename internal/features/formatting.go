@@ -24,7 +24,7 @@ func (f *FormattingProvider) ProvideDocumentFormatting(doc *document.Document, o
 
 	// Use conservative indentation-only formatting
 	formattedContent := f.formatDocumentConservatively(doc.Content, options)
-	
+
 	// If content unchanged, return no edits
 	if formattedContent == string(doc.Content) {
 		return nil, nil
@@ -58,39 +58,39 @@ func (f *FormattingProvider) ProvideDocumentRangeFormatting(doc *document.Docume
 func (f *FormattingProvider) formatDocument(source []byte, root interface{}, options protocol.FormattingOptions) string {
 	lines := strings.Split(string(source), "\n")
 	var formattedLines []string
-	
+
 	indentLevel := 0
 	indentString := f.getIndentString(options)
-	
+
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
-		
+
 		// Skip empty lines
 		if trimmedLine == "" {
 			formattedLines = append(formattedLines, "")
 			continue
 		}
-		
+
 		// Adjust indent level based on content
 		if f.isClosingBrace(trimmedLine) {
 			indentLevel = max(0, indentLevel-1)
 		}
-		
+
 		// Apply indentation
 		formattedLine := strings.Repeat(indentString, indentLevel) + trimmedLine
 		formattedLines = append(formattedLines, formattedLine)
-		
+
 		// Increase indent level for opening braces
 		if f.isOpeningBrace(trimmedLine) {
 			indentLevel++
 		}
 	}
-	
+
 	// Apply additional formatting rules
 	formatted := strings.Join(formattedLines, "\n")
 	formatted = f.normalizeSpacing(formatted)
 	formatted = f.formatComments(formatted)
-	
+
 	return formatted
 }
 
@@ -114,11 +114,11 @@ func (f *FormattingProvider) getIndentString(options protocol.FormattingOptions)
 func (f *FormattingProvider) isOpeningBrace(line string) bool {
 	line = strings.TrimSpace(line)
 	return strings.HasSuffix(line, "{") ||
-		   strings.Contains(line, "service ") && strings.HasSuffix(line, "{") ||
-		   strings.Contains(line, "scope ") && strings.HasSuffix(line, "{") ||
-		   strings.Contains(line, "struct ") && strings.HasSuffix(line, "{") ||
-		   strings.Contains(line, "enum ") && strings.HasSuffix(line, "{") ||
-		   strings.Contains(line, "exception ") && strings.HasSuffix(line, "{")
+		strings.Contains(line, "service ") && strings.HasSuffix(line, "{") ||
+		strings.Contains(line, "scope ") && strings.HasSuffix(line, "{") ||
+		strings.Contains(line, "struct ") && strings.HasSuffix(line, "{") ||
+		strings.Contains(line, "enum ") && strings.HasSuffix(line, "{") ||
+		strings.Contains(line, "exception ") && strings.HasSuffix(line, "{")
 }
 
 // isClosingBrace checks if a line contains a closing brace that decreases indentation
@@ -127,11 +127,10 @@ func (f *FormattingProvider) isClosingBrace(line string) bool {
 	return line == "}" || strings.HasPrefix(line, "}")
 }
 
-
 // formatComments ensures proper spacing around comments
 func (f *FormattingProvider) formatComments(content string) string {
 	lines := strings.Split(content, "\n")
-	
+
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "//") {
@@ -142,7 +141,7 @@ func (f *FormattingProvider) formatComments(content string) string {
 			lines[i] = indent + "// " + comment
 		}
 	}
-	
+
 	return strings.Join(lines, "\n")
 }
 
@@ -150,55 +149,54 @@ func (f *FormattingProvider) formatComments(content string) string {
 func (f *FormattingProvider) formatDocumentConservatively(source []byte, options protocol.FormattingOptions) string {
 	lines := strings.Split(string(source), "\n")
 	var formattedLines []string
-	
+
 	indentLevel := 0
 	indentString := f.getIndentString(options)
-	
+
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
-		
+
 		// Preserve empty lines as-is
 		if trimmedLine == "" {
 			formattedLines = append(formattedLines, "")
 			continue
 		}
-		
+
 		// Handle comments with proper indentation
 		if strings.HasPrefix(trimmedLine, "//") || strings.HasPrefix(trimmedLine, "/*") {
 			formattedLine := strings.Repeat(indentString, indentLevel) + trimmedLine
 			formattedLines = append(formattedLines, formattedLine)
 			continue
 		}
-		
+
 		// Adjust indent level based on closing braces
 		if f.isClosingBrace(trimmedLine) {
 			indentLevel = max(0, indentLevel-1)
 		}
-		
+
 		// Apply proper indentation and basic spacing normalization
 		normalizedLine := f.normalizeSpacing(trimmedLine)
 		formattedLine := strings.Repeat(indentString, indentLevel) + normalizedLine
 		formattedLines = append(formattedLines, formattedLine)
-		
+
 		// Increase indent level for opening braces
 		if f.isOpeningBrace(trimmedLine) {
 			indentLevel++
 		}
 	}
-	
+
 	return strings.Join(formattedLines, "\n")
 }
-
 
 // normalizeSpacing normalizes spacing in a line (convert tabs to spaces, fix multiple spaces)
 func (f *FormattingProvider) normalizeSpacing(line string) string {
 	// Replace tabs with spaces
 	line = strings.ReplaceAll(line, "\t", "    ")
-	
+
 	// Normalize spacing around operators and punctuation
 	line = strings.ReplaceAll(line, ",", ", ")
 	line = strings.ReplaceAll(line, ",  ", ", ") // Fix double spaces after comma
-	
+
 	// Fix spacing around colons (but be careful with URLs)
 	if strings.Contains(line, ":") && !strings.Contains(line, "://") {
 		parts := strings.SplitN(line, ":", 2)
@@ -208,18 +206,18 @@ func (f *FormattingProvider) normalizeSpacing(line string) string {
 			line = before + ": " + after
 		}
 	}
-	
+
 	// Normalize multiple spaces to single spaces first
 	for strings.Contains(line, "  ") {
 		line = strings.ReplaceAll(line, "  ", " ")
 	}
-	
+
 	// Trim spaces inside parentheses for method parameter lists
 	// Remove space after opening paren: "( " -> "("
 	line = strings.ReplaceAll(line, "( ", "(")
 	// Remove space before closing paren: " )" -> ")"
 	line = strings.ReplaceAll(line, " )", ")")
-	
+
 	return line
 }
 

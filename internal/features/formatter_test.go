@@ -16,7 +16,7 @@ func TestFrugalFormatterBasic(t *testing.T) {
 		"tabSize":      float64(4),
 		"insertSpaces": true,
 	}
-	
+
 	formatter := NewFrugalFormatter(options)
 	if formatter.indentSize != 4 {
 		t.Errorf("Expected indent size 4, got %d", formatter.indentSize)
@@ -38,11 +38,11 @@ void updateUser(1:User user)
 }`
 
 	result := testFormat(t, unformatted)
-	
+
 	// Normalize whitespace for comparison
 	result = normalizeWhitespace(result)
 	expected = normalizeWhitespace(expected)
-	
+
 	if result != expected {
 		t.Errorf("Service formatting failed.\nExpected:\n%s\nGot:\n%s", expected, result)
 	}
@@ -62,10 +62,10 @@ func TestFormatterStruct(t *testing.T) {
 }`
 
 	result := testFormat(t, unformatted)
-	
+
 	result = normalizeWhitespace(result)
 	expected = normalizeWhitespace(expected)
-	
+
 	if result != expected {
 		t.Errorf("Struct formatting failed.\nExpected:\n%s\nGot:\n%s", expected, result)
 	}
@@ -85,10 +85,10 @@ PENDING=3
 }`
 
 	result := testFormat(t, unformatted)
-	
+
 	result = normalizeWhitespace(result)
 	expected = normalizeWhitespace(expected)
-	
+
 	if result != expected {
 		t.Errorf("Enum formatting failed.\nExpected:\n%s\nGot:\n%s", expected, result)
 	}
@@ -106,10 +106,10 @@ UserUpdated:User
 }`
 
 	result := testFormat(t, unformatted)
-	
+
 	result = normalizeWhitespace(result)
 	expected = normalizeWhitespace(expected)
-	
+
 	if result != expected {
 		t.Errorf("Scope formatting failed.\nExpected:\n%s\nGot:\n%s", expected, result)
 	}
@@ -121,10 +121,10 @@ func TestFormatterConst(t *testing.T) {
 	expected := `const i32 DEFAULT_TIMEOUT = 5000;`
 
 	result := testFormat(t, unformatted)
-	
+
 	result = normalizeWhitespace(result)
 	expected = normalizeWhitespace(expected)
-	
+
 	if result != expected {
 		t.Errorf("Const formatting failed.\nExpected:\n%s\nGot:\n%s", expected, result)
 	}
@@ -138,10 +138,10 @@ typedef map<string,string>Metadata`
 typedef map<string,string> Metadata`
 
 	result := testFormat(t, unformatted)
-	
+
 	result = normalizeWhitespace(result)
 	expected = normalizeWhitespace(expected)
-	
+
 	if result != expected {
 		t.Errorf("Typedef formatting failed.\nExpected:\n%s\nGot:\n%s", expected, result)
 	}
@@ -155,10 +155,10 @@ namespace go   example`
 namespace go example`
 
 	result := testFormat(t, unformatted)
-	
+
 	result = normalizeWhitespace(result)
 	expected = normalizeWhitespace(expected)
-	
+
 	if result != expected {
 		t.Errorf("Include/namespace formatting failed.\nExpected:\n%s\nGot:\n%s", expected, result)
 	}
@@ -202,17 +202,17 @@ enum Status {
 const i32 TIMEOUT = 5000;`
 
 	result := testFormat(t, unformatted)
-	
+
 	// Compare line by line for better debugging
 	resultLines := strings.Split(strings.TrimSpace(result), "\n")
 	expectedLines := strings.Split(strings.TrimSpace(expected), "\n")
-	
+
 	if len(resultLines) != len(expectedLines) {
 		t.Errorf("Line count mismatch. Expected %d lines, got %d lines", len(expectedLines), len(resultLines))
 		t.Logf("Result:\n%s", result)
 		return
 	}
-	
+
 	for i, expectedLine := range expectedLines {
 		if i < len(resultLines) {
 			resultLine := resultLines[i]
@@ -231,7 +231,7 @@ func TestFormatterFieldAlignment(t *testing.T) {
 }`
 
 	result := testFormat(t, unformatted)
-	
+
 	// Check that fields are aligned (this is a basic test)
 	lines := strings.Split(result, "\n")
 	fieldLines := []string{}
@@ -241,19 +241,19 @@ func TestFormatterFieldAlignment(t *testing.T) {
 			fieldLines = append(fieldLines, line)
 		}
 	}
-	
+
 	if len(fieldLines) < 2 {
 		t.Error("Should have found field lines for alignment test")
 		return
 	}
-	
+
 	// Basic alignment check - all field lines should have consistent colon positioning
 	t.Logf("Field alignment result:\n%s", strings.Join(fieldLines, "\n"))
 }
 
 func TestFormattingProvider(t *testing.T) {
 	provider := NewFormattingProvider()
-	
+
 	content := `service UserService{
 User getUser(1:i64 userId)
 }`
@@ -291,7 +291,7 @@ User getUser(1:i64 userId)
 	if !strings.Contains(edit.NewText, "service UserService") {
 		t.Error("Expected formatted content to contain service definition")
 	}
-	
+
 	// Check that content is properly indented
 	if !strings.Contains(edit.NewText, "    User getUser(") {
 		t.Error("Expected method to be properly indented")

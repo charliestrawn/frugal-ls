@@ -14,12 +14,12 @@ import (
 
 // FrugalFormatter provides comprehensive AST-based formatting for Frugal files
 type FrugalFormatter struct {
-	indentSize     int
-	useSpaces      bool
-	insertSpaces   bool
-	maxLineLength  int
-	alignFields    bool
-	sortImports    bool
+	indentSize    int
+	useSpaces     bool
+	insertSpaces  bool
+	maxLineLength int
+	alignFields   bool
+	sortImports   bool
 }
 
 // fieldComponents represents the components of a field definition
@@ -81,7 +81,7 @@ func (f *FrugalFormatter) formatNode(node *tree_sitter.Node, source []byte, inde
 	}
 
 	nodeType := node.Kind()
-	
+
 	switch nodeType {
 	case "document":
 		return f.formatDocument(node, source, indentLevel)
@@ -133,30 +133,30 @@ func (f *FrugalFormatter) formatNode(node *tree_sitter.Node, source []byte, inde
 func (f *FrugalFormatter) formatDocument(node *tree_sitter.Node, source []byte, indentLevel int) string {
 	var sections []string
 	var currentSection []string
-	
+
 	// Group related definitions together
 	childCount := node.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := node.Child(i)
 		childType := child.Kind()
-		
+
 		// Skip only whitespace, but preserve comments
 		if childType == "whitespace" {
 			continue
 		}
-		
+
 		formatted := f.formatNode(child, source, 0)
 		if strings.TrimSpace(formatted) != "" {
 			currentSection = append(currentSection, formatted)
-			
+
 			// Comments don't trigger section breaks - they stay with the next definition
 			if childType == "comment" {
 				continue
 			}
-			
+
 			// Determine the actual child type for section breaks
 			actualChildType := f.getActualDefinitionType(child)
-			
+
 			// Look ahead to next non-empty child to determine if we should break
 			shouldBreak := f.shouldAddSectionBreak(actualChildType)
 			if shouldBreak {
@@ -173,7 +173,7 @@ func (f *FrugalFormatter) formatDocument(node *tree_sitter.Node, source []byte, 
 					}
 				}
 			}
-			
+
 			if shouldBreak {
 				if len(currentSection) > 0 {
 					sections = append(sections, strings.Join(currentSection, "\n"))
@@ -182,20 +182,15 @@ func (f *FrugalFormatter) formatDocument(node *tree_sitter.Node, source []byte, 
 			}
 		}
 	}
-	
+
 	// Add remaining section
 	if len(currentSection) > 0 {
 		sections = append(sections, strings.Join(currentSection, "\n"))
 	}
-	
+
 	// Join sections with double newlines
 	result := strings.Join(sections, "\n\n")
-	
-	// Ensure file ends with single newline
-	if !strings.HasSuffix(result, "\n") {
-		result += "\n"
-	}
-	
+
 	return result
 }
 
@@ -207,9 +202,9 @@ func (f *FrugalFormatter) getActualDefinitionType(node *tree_sitter.Node) string
 		for i := uint(0); i < childCount; i++ {
 			child := node.Child(i)
 			childType := child.Kind()
-			if strings.HasSuffix(childType, "_definition") || 
-			   childType == "include" || 
-			   childType == "namespace_declaration" {
+			if strings.HasSuffix(childType, "_definition") ||
+				childType == "include" ||
+				childType == "namespace_declaration" {
 				return childType
 			}
 		}
@@ -235,12 +230,12 @@ func (f *FrugalFormatter) getNextDefinitionType(parentNode *tree_sitter.Node, so
 	for i := currentIndex + 1; i < childCount; i++ {
 		child := parentNode.Child(i)
 		childType := child.Kind()
-		
+
 		// Skip whitespace and comments
 		if childType == "comment" || childType == "whitespace" {
 			continue
 		}
-		
+
 		// Return the actual definition type for the next child
 		return f.getActualDefinitionType(child)
 	}
@@ -254,12 +249,12 @@ func (f *FrugalFormatter) countRemainingDefinitions(parentNode *tree_sitter.Node
 	for i := currentIndex + 1; i < childCount; i++ {
 		child := parentNode.Child(i)
 		childType := child.Kind()
-		
+
 		// Skip whitespace and comments
 		if childType == "comment" || childType == "whitespace" {
 			continue
 		}
-		
+
 		count++
 	}
 	return count
@@ -273,7 +268,7 @@ func (f *FrugalFormatter) shouldAddSectionBreak(nodeType string) bool {
 	case "service_definition", "scope_definition":
 		return true
 	case "struct_definition", "exception_definition":
-		return true // Separate structs and exceptions with blank lines
+		return false // Group structs and exceptions together
 	case "enum_definition":
 		return true // Separate enums from other definitions
 	case "const_definition", "typedef_definition":
@@ -297,31 +292,31 @@ func (f *FrugalFormatter) formatInclude(node *tree_sitter.Node, source []byte) s
 			break
 		}
 	}
-	
+
 	if includePath != "" {
 		return fmt.Sprintf("include \"%s\"", includePath)
 	}
-	
+
 	// Fallback to regex if AST parsing fails
 	nodeText := ast.GetText(node, source)
 	re := regexp.MustCompile(`include\s*"([^"]+)"`)
 	if matches := re.FindStringSubmatch(nodeText); len(matches) > 1 {
 		return fmt.Sprintf("include \"%s\"", matches[1])
 	}
-	
+
 	return strings.TrimSpace(nodeText)
 }
 
 // formatNamespace formats namespace declarations
 func (f *FrugalFormatter) formatNamespace(node *tree_sitter.Node, source []byte) string {
 	nodeText := ast.GetText(node, source)
-	
+
 	// Extract namespace parts
 	re := regexp.MustCompile(`namespace\s+(\w+)\s+(.+)`)
 	if matches := re.FindStringSubmatch(strings.TrimSpace(nodeText)); len(matches) > 2 {
 		return fmt.Sprintf("namespace %s %s", matches[1], matches[2])
 	}
-	
+
 	return strings.TrimSpace(nodeText)
 }
 
@@ -331,18 +326,18 @@ func (f *FrugalFormatter) formatService(node *tree_sitter.Node, source []byte, i
 	if f.nodeContainsComments(node, source) {
 		return f.formatConservatively(node, source, indentLevel)
 	}
-	
+
 	serviceName := f.extractIdentifier(node, source)
 	if serviceName == "" {
 		return f.formatGenericNode(node, source, indentLevel)
 	}
-	
+
 	indent := f.getIndent(indentLevel)
 	bodyIndent := f.getIndent(indentLevel + 1)
-	
+
 	var result strings.Builder
 	result.WriteString(fmt.Sprintf("%sservice %s {", indent, serviceName))
-	
+
 	// Format service methods
 	serviceBody := ast.FindNodeByType(node, "service_body")
 	if serviceBody != nil {
@@ -359,7 +354,7 @@ func (f *FrugalFormatter) formatService(node *tree_sitter.Node, source []byte, i
 			result.WriteString(indent)
 		}
 	}
-	
+
 	result.WriteString("}")
 	return result.String()
 }
@@ -368,27 +363,27 @@ func (f *FrugalFormatter) formatService(node *tree_sitter.Node, source []byte, i
 func (f *FrugalFormatter) formatComment(node *tree_sitter.Node, source []byte, indentLevel int) string {
 	indent := f.getIndent(indentLevel)
 	commentText := strings.TrimSpace(ast.GetText(node, source))
-	
+
 	// Preserve the original comment format
 	return indent + commentText
 }
 
-// formatScope formats scope definitions  
+// formatScope formats scope definitions
 func (f *FrugalFormatter) formatScope(node *tree_sitter.Node, source []byte, indentLevel int) string {
 	indent := f.getIndent(indentLevel)
 	bodyIndent := f.getIndent(indentLevel + 1)
-	
+
 	// Extract scope name and prefix
 	scopeName := f.extractIdentifier(node, source)
 	prefix := f.extractScopePrefix(node, source)
-	
+
 	var result strings.Builder
 	if prefix != "" {
 		result.WriteString(fmt.Sprintf("%sscope %s prefix \"%s\" {", indent, scopeName, prefix))
 	} else {
 		result.WriteString(fmt.Sprintf("%sscope %s {", indent, scopeName))
 	}
-	
+
 	// Format scope events
 	scopeBody := ast.FindNodeByType(node, "scope_body")
 	if scopeBody != nil {
@@ -405,7 +400,7 @@ func (f *FrugalFormatter) formatScope(node *tree_sitter.Node, source []byte, ind
 			result.WriteString(indent)
 		}
 	}
-	
+
 	result.WriteString("}")
 	return result.String()
 }
@@ -416,30 +411,30 @@ func (f *FrugalFormatter) formatStruct(node *tree_sitter.Node, source []byte, in
 	if f.nodeContainsComments(node, source) {
 		return f.formatConservatively(node, source, indentLevel)
 	}
-	
+
 	structName := f.extractIdentifier(node, source)
 	if structName == "" {
 		return f.formatGenericNode(node, source, indentLevel)
 	}
-	
+
 	indent := f.getIndent(indentLevel)
 	bodyIndent := f.getIndent(indentLevel + 1)
-	
+
 	var result strings.Builder
 	result.WriteString(fmt.Sprintf("%sstruct %s {", indent, structName))
-	
+
 	// Format struct fields
 	structBody := ast.FindNodeByType(node, "struct_body")
 	if structBody != nil {
 		fields := f.extractStructFields(structBody, source)
 		if len(fields) > 0 {
 			result.WriteString("\n")
-			
+
 			// Align fields if requested
 			if f.alignFields {
 				fields = f.alignFieldDefinitions(fields)
 			}
-			
+
 			for i, field := range fields {
 				result.WriteString(bodyIndent + field)
 				if i < len(fields)-1 {
@@ -450,7 +445,7 @@ func (f *FrugalFormatter) formatStruct(node *tree_sitter.Node, source []byte, in
 			result.WriteString(indent)
 		}
 	}
-	
+
 	result.WriteString("}")
 	return result.String()
 }
@@ -461,25 +456,25 @@ func (f *FrugalFormatter) formatEnum(node *tree_sitter.Node, source []byte, inde
 	if enumName == "" {
 		return f.formatGenericNode(node, source, indentLevel)
 	}
-	
+
 	indent := f.getIndent(indentLevel)
 	bodyIndent := f.getIndent(indentLevel + 1)
-	
+
 	var result strings.Builder
 	result.WriteString(fmt.Sprintf("%senum %s {", indent, enumName))
-	
+
 	// Format enum values
 	enumBody := ast.FindNodeByType(node, "enum_body")
 	if enumBody != nil {
 		values := f.extractEnumValues(enumBody, source)
 		if len(values) > 0 {
 			result.WriteString("\n")
-			
+
 			// Align enum values if requested
 			if f.alignFields {
 				values = f.alignEnumValues(values)
 			}
-			
+
 			for i, value := range values {
 				result.WriteString(bodyIndent + value)
 				if i < len(values)-1 {
@@ -490,7 +485,7 @@ func (f *FrugalFormatter) formatEnum(node *tree_sitter.Node, source []byte, inde
 			result.WriteString(indent)
 		}
 	}
-	
+
 	result.WriteString("}")
 	return result.String()
 }
@@ -502,29 +497,29 @@ func (f *FrugalFormatter) formatException(node *tree_sitter.Node, source []byte,
 	if exceptionName == "" {
 		return f.formatGenericNode(node, source, indentLevel)
 	}
-	
+
 	indent := f.getIndent(indentLevel)
 	bodyIndent := f.getIndent(indentLevel + 1)
-	
+
 	var result strings.Builder
 	result.WriteString(fmt.Sprintf("%sexception %s {", indent, exceptionName))
-	
+
 	// Format exception fields (same as struct fields)
-	exceptionBody := ast.FindNodeByType(node, "exception_body") 
+	exceptionBody := ast.FindNodeByType(node, "exception_body")
 	if exceptionBody == nil {
 		// Try struct_body as fallback
 		exceptionBody = ast.FindNodeByType(node, "struct_body")
 	}
-	
+
 	if exceptionBody != nil {
 		fields := f.extractStructFields(exceptionBody, source)
 		if len(fields) > 0 {
 			result.WriteString("\n")
-			
+
 			if f.alignFields {
 				fields = f.alignFieldDefinitions(fields)
 			}
-			
+
 			for i, field := range fields {
 				result.WriteString(bodyIndent + field)
 				if i < len(fields)-1 {
@@ -535,7 +530,7 @@ func (f *FrugalFormatter) formatException(node *tree_sitter.Node, source []byte,
 			result.WriteString(indent)
 		}
 	}
-	
+
 	result.WriteString("}")
 	return result.String()
 }
@@ -544,31 +539,31 @@ func (f *FrugalFormatter) formatException(node *tree_sitter.Node, source []byte,
 func (f *FrugalFormatter) formatConst(node *tree_sitter.Node, source []byte, indentLevel int) string {
 	indent := f.getIndent(indentLevel)
 	nodeText := strings.TrimSpace(ast.GetText(node, source))
-	
+
 	// Parse const definition: const type name = value
 	re := regexp.MustCompile(`const\s+(\w+)\s+(\w+)\s*=\s*(.+?)(?:;)?$`)
 	if matches := re.FindStringSubmatch(nodeText); len(matches) > 3 {
 		constType := matches[1]
 		constName := matches[2]
 		constValue := strings.TrimSpace(matches[3])
-		
+
 		// Add semicolon if not present
 		if !strings.HasSuffix(constValue, ";") {
 			constValue += ";"
 		}
-		
+
 		return fmt.Sprintf("%sconst %s %s = %s", indent, constType, constName, constValue)
 	}
-	
+
 	return indent + nodeText
 }
 
 // formatTypedef formats typedef definitions
 func (f *FrugalFormatter) formatTypedef(node *tree_sitter.Node, source []byte, indentLevel int) string {
 	indent := f.getIndent(indentLevel)
-	
+
 	var baseType, aliasName string
-	
+
 	// Extract components from AST
 	childCount := node.ChildCount()
 	for i := uint(0); i < childCount; i++ {
@@ -580,11 +575,11 @@ func (f *FrugalFormatter) formatTypedef(node *tree_sitter.Node, source []byte, i
 			aliasName = strings.TrimSpace(ast.GetText(child, source))
 		}
 	}
-	
+
 	if baseType != "" && aliasName != "" {
 		return fmt.Sprintf("%stypedef %s %s", indent, baseType, aliasName)
 	}
-	
+
 	// Fallback to regex
 	nodeText := strings.TrimSpace(ast.GetText(node, source))
 	re := regexp.MustCompile(`typedef\s+(.+?)\s+(\w+)`)
@@ -593,7 +588,7 @@ func (f *FrugalFormatter) formatTypedef(node *tree_sitter.Node, source []byte, i
 		aliasName := matches[2]
 		return fmt.Sprintf("%stypedef %s %s", indent, baseType, aliasName)
 	}
-	
+
 	return indent + nodeText
 }
 
@@ -631,7 +626,7 @@ func (f *FrugalFormatter) extractScopePrefix(node *tree_sitter.Node, source []by
 			}
 		}
 	}
-	
+
 	// Fallback to regex
 	nodeText := ast.GetText(node, source)
 	re := regexp.MustCompile(`prefix\s*"([^"]+)"`)
@@ -644,7 +639,7 @@ func (f *FrugalFormatter) extractScopePrefix(node *tree_sitter.Node, source []by
 // extractServiceMethods extracts and formats service methods
 func (f *FrugalFormatter) extractServiceMethods(serviceBody *tree_sitter.Node, source []byte) []string {
 	var methods []string
-	
+
 	childCount := serviceBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := serviceBody.Child(i)
@@ -655,21 +650,21 @@ func (f *FrugalFormatter) extractServiceMethods(serviceBody *tree_sitter.Node, s
 			}
 		}
 	}
-	
+
 	return methods
 }
 
 // formatServiceMethod formats a single service method
 func (f *FrugalFormatter) formatServiceMethod(methodNode *tree_sitter.Node, source []byte) string {
 	methodText := strings.TrimSpace(ast.GetText(methodNode, source))
-	
+
 	// Remove trailing comma if present (it's handled separately)
 	methodText = strings.TrimSuffix(methodText, ",")
 	methodText = strings.TrimSpace(methodText)
-	
+
 	// Clean up spacing and formatting
 	methodText = f.normalizeMethodSignature(methodText)
-	
+
 	return methodText
 }
 
@@ -678,28 +673,28 @@ func (f *FrugalFormatter) normalizeMethodSignature(signature string) string {
 	// Remove extra whitespace
 	signature = regexp.MustCompile(`\s+`).ReplaceAllString(signature, " ")
 	signature = strings.TrimSpace(signature)
-	
+
 	// Format throws clause - ensure proper spacing and parentheses
 	signature = regexp.MustCompile(`\s*throws\s*\(\s*`).ReplaceAllString(signature, " throws (")
 	signature = regexp.MustCompile(`\s*\)\s*$`).ReplaceAllString(signature, ")")
-	
+
 	// Format parameter parentheses - ensure proper spacing
 	signature = regexp.MustCompile(`\(\s*`).ReplaceAllString(signature, "(")
 	signature = regexp.MustCompile(`\s*\)`).ReplaceAllString(signature, ")")
-	
+
 	// Ensure colon formatting in parameters: "1: type param"
 	signature = regexp.MustCompile(`(\d+)\s*:\s*`).ReplaceAllString(signature, "$1: ")
-	
+
 	// Format parameters - ensure space after commas but handle parentheses properly
 	signature = regexp.MustCompile(`,\s*`).ReplaceAllString(signature, ", ")
-	
+
 	return signature
 }
 
 // extractScopeEvents extracts and formats scope events
 func (f *FrugalFormatter) extractScopeEvents(scopeBody *tree_sitter.Node, source []byte) []string {
 	var events []string
-	
+
 	childCount := scopeBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := scopeBody.Child(i)
@@ -715,13 +710,13 @@ func (f *FrugalFormatter) extractScopeEvents(scopeBody *tree_sitter.Node, source
 			}
 		}
 	}
-	
+
 	return events
 }
 
 // normalizeEventDefinition normalizes event definitions
 func (f *FrugalFormatter) normalizeEventDefinition(event string) string {
-	// Format "EventName: Type" 
+	// Format "EventName: Type"
 	if parts := strings.Split(event, ":"); len(parts) == 2 {
 		eventName := strings.TrimSpace(parts[0])
 		eventType := strings.TrimSpace(parts[1])
@@ -734,7 +729,7 @@ func (f *FrugalFormatter) normalizeEventDefinition(event string) string {
 // extractStructFields extracts and formats struct fields
 func (f *FrugalFormatter) extractStructFields(structBody *tree_sitter.Node, source []byte) []string {
 	var fields []string
-	
+
 	childCount := structBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := structBody.Child(i)
@@ -746,7 +741,7 @@ func (f *FrugalFormatter) extractStructFields(structBody *tree_sitter.Node, sour
 			}
 		}
 	}
-	
+
 	return fields
 }
 
@@ -754,18 +749,18 @@ func (f *FrugalFormatter) extractStructFields(structBody *tree_sitter.Node, sour
 func (f *FrugalFormatter) normalizeFieldDefinition(field string) string {
 	// Remove trailing comma
 	field = strings.TrimSuffix(strings.TrimSpace(field), ",")
-	
+
 	// Normalize spacing: "1: required string name"
 	field = regexp.MustCompile(`(\d+)\s*:\s*`).ReplaceAllString(field, "$1: ")
 	field = regexp.MustCompile(`\s+`).ReplaceAllString(field, " ")
-	
+
 	return field
 }
 
 // extractEnumValues extracts and formats enum values
 func (f *FrugalFormatter) extractEnumValues(enumBody *tree_sitter.Node, source []byte) []string {
 	var values []string
-	
+
 	childCount := enumBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := enumBody.Child(i)
@@ -780,7 +775,7 @@ func (f *FrugalFormatter) extractEnumValues(enumBody *tree_sitter.Node, source [
 			}
 		}
 	}
-	
+
 	return values
 }
 
@@ -788,14 +783,14 @@ func (f *FrugalFormatter) extractEnumValues(enumBody *tree_sitter.Node, source [
 func (f *FrugalFormatter) normalizeEnumValue(value string) string {
 	// Remove trailing comma
 	value = strings.TrimSuffix(strings.TrimSpace(value), ",")
-	
+
 	// Normalize "NAME = value" format
 	if parts := strings.Split(value, "="); len(parts) == 2 {
 		name := strings.TrimSpace(parts[0])
 		val := strings.TrimSpace(parts[1])
 		return fmt.Sprintf("%s = %s", name, val)
 	}
-	
+
 	return value
 }
 
@@ -806,17 +801,16 @@ func (f *FrugalFormatter) alignFieldDefinitions(fields []string) []string {
 	if len(fields) <= 1 {
 		return fields
 	}
-	
+
 	// Find the maximum width of each component
 	var maxIdWidth, maxTypeWidth int
-	
-	
+
 	var components []fieldComponents
-	
+
 	for _, field := range fields {
 		comp := f.parseFieldComponents(field)
 		components = append(components, comp)
-		
+
 		if len(comp.id) > maxIdWidth {
 			maxIdWidth = len(comp.id)
 		}
@@ -824,12 +818,12 @@ func (f *FrugalFormatter) alignFieldDefinitions(fields []string) []string {
 			maxTypeWidth = len(comp.qualifier + " " + comp.fieldType)
 		}
 	}
-	
+
 	// Reconstruct with alignment
 	var aligned []string
 	for _, comp := range components {
 		idPart := comp.id + strings.Repeat(" ", maxIdWidth-len(comp.id))
-		
+
 		var typePart string
 		if comp.qualifier != "" {
 			typePart = comp.qualifier + " " + comp.fieldType
@@ -837,10 +831,10 @@ func (f *FrugalFormatter) alignFieldDefinitions(fields []string) []string {
 			typePart = comp.fieldType
 		}
 		typePart += strings.Repeat(" ", maxTypeWidth-len(typePart))
-		
+
 		aligned = append(aligned, fmt.Sprintf("%s: %s %s", idPart, typePart, comp.name))
 	}
-	
+
 	return aligned
 }
 
@@ -851,17 +845,17 @@ func (f *FrugalFormatter) parseFieldComponents(field string) fieldComponents {
 	if len(parts) != 2 {
 		return fieldComponents{fieldType: field}
 	}
-	
+
 	id := strings.TrimSpace(parts[0])
 	rest := strings.TrimSpace(parts[1])
-	
+
 	restParts := strings.Fields(rest)
 	if len(restParts) == 0 {
 		return fieldComponents{id: id}
 	}
-	
+
 	var qualifier, fieldType, name string
-	
+
 	if len(restParts) >= 3 && (restParts[0] == "required" || restParts[0] == "optional") {
 		qualifier = restParts[0]
 		fieldType = restParts[1]
@@ -872,7 +866,7 @@ func (f *FrugalFormatter) parseFieldComponents(field string) fieldComponents {
 	} else {
 		fieldType = restParts[0]
 	}
-	
+
 	return fieldComponents{
 		id:        id,
 		qualifier: qualifier,
@@ -886,10 +880,10 @@ func (f *FrugalFormatter) alignEnumValues(values []string) []string {
 	if len(values) <= 1 {
 		return values
 	}
-	
+
 	maxNameWidth := 0
 	var names, vals []string
-	
+
 	for _, value := range values {
 		if parts := strings.Split(value, "="); len(parts) == 2 {
 			name := strings.TrimSpace(parts[0])
@@ -904,7 +898,7 @@ func (f *FrugalFormatter) alignEnumValues(values []string) []string {
 			vals = append(vals, "")
 		}
 	}
-	
+
 	var aligned []string
 	for i, name := range names {
 		if vals[i] != "" {
@@ -914,7 +908,7 @@ func (f *FrugalFormatter) alignEnumValues(values []string) []string {
 			aligned = append(aligned, name)
 		}
 	}
-	
+
 	return aligned
 }
 
@@ -931,12 +925,12 @@ func (f *FrugalFormatter) nodeContainsComments(node *tree_sitter.Node, source []
 	if node == nil {
 		return false
 	}
-	
+
 	// Check current node
 	if node.Kind() == "comment" {
 		return true
 	}
-	
+
 	// Check children recursively
 	childCount := node.ChildCount()
 	for i := uint(0); i < childCount; i++ {
@@ -945,7 +939,7 @@ func (f *FrugalFormatter) nodeContainsComments(node *tree_sitter.Node, source []
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -953,18 +947,18 @@ func (f *FrugalFormatter) nodeContainsComments(node *tree_sitter.Node, source []
 func (f *FrugalFormatter) formatConservatively(node *tree_sitter.Node, source []byte, indentLevel int) string {
 	indent := f.getIndent(indentLevel)
 	nodeText := ast.GetText(node, source)
-	
+
 	// Preserve the original text but fix basic indentation
 	lines := strings.Split(nodeText, "\n")
 	var formattedLines []string
-	
+
 	for i, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
 		if trimmedLine == "" {
 			formattedLines = append(formattedLines, "")
 			continue
 		}
-		
+
 		// For the first line, use the specified indent level
 		if i == 0 {
 			formattedLines = append(formattedLines, indent+trimmedLine)
@@ -980,6 +974,6 @@ func (f *FrugalFormatter) formatConservatively(node *tree_sitter.Node, source []
 			}
 		}
 	}
-	
+
 	return strings.Join(formattedLines, "\n")
 }
