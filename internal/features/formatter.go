@@ -364,8 +364,116 @@ func (f *FrugalFormatter) formatComment(node *tree_sitter.Node, source []byte, i
 	indent := f.getIndent(indentLevel)
 	commentText := strings.TrimSpace(ast.GetText(node, source))
 
-	// Preserve the original comment format
+	// Handle multi-line comments with proper star alignment
+	if strings.HasPrefix(commentText, "/*") && strings.Contains(commentText, "\n") {
+		return f.formatMultiLineComment(commentText, indent)
+	}
+
+	// Preserve the original comment format for single-line comments
 	return indent + commentText
+}
+
+// formatMultiLineComment formats multi-line comments with proper star alignment
+func (f *FrugalFormatter) formatMultiLineComment(commentText, indent string) string {
+	lines := strings.Split(commentText, "\n")
+	if len(lines) <= 1 {
+		return indent + commentText
+	}
+
+	var formattedLines []string
+	
+	// First line: should be "/**"
+	firstLine := strings.TrimSpace(lines[0])
+	var firstLineContent string
+	
+	if firstLine == "/*" {
+		// Just opening, no content
+		formattedLines = append(formattedLines, indent + "/**")
+	} else if strings.HasPrefix(firstLine, "/**") {
+		// Already starts with /** - check if it has content
+		if len(firstLine) > 3 {
+			// Has content after /** - extract it
+			firstLineContent = strings.TrimSpace(firstLine[3:])
+			formattedLines = append(formattedLines, indent + "/**")
+			if firstLineContent != "" {
+				formattedLines = append(formattedLines, indent + " * " + firstLineContent)
+			}
+		} else {
+			// Just /** with no content
+			formattedLines = append(formattedLines, indent + "/**")
+		}
+	} else if strings.HasPrefix(firstLine, "/*") {
+		// Has content on first line - extract it
+		firstLineContent = strings.TrimSpace(firstLine[2:]) // Remove "/*"
+		formattedLines = append(formattedLines, indent + "/**")
+		if firstLineContent != "" {
+			formattedLines = append(formattedLines, indent + " * " + firstLineContent)
+		}
+	} else {
+		// This shouldn't happen in a well-formed comment, but handle it
+		formattedLines = append(formattedLines, indent + "/**")
+		if firstLine != "" {
+			formattedLines = append(formattedLines, indent + " * " + firstLine)
+		}
+	}
+
+	// Middle lines: align stars with space
+	for i := 1; i < len(lines)-1; i++ {
+		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			formattedLines = append(formattedLines, indent + " *")
+		} else {
+			// Ensure line starts with " * "
+			if strings.HasPrefix(line, "*") {
+				if len(line) == 1 || line[1] != ' ' {
+					line = " * " + line[1:]
+				} else {
+					line = " " + line
+				}
+			} else if !strings.HasPrefix(line, " *") {
+				line = " * " + line
+			}
+			// Ensure space after star if there's content
+			if strings.HasPrefix(line, " *") && len(line) > 2 && line[2] != ' ' {
+				line = " * " + line[2:]
+			}
+			formattedLines = append(formattedLines, indent + line)
+		}
+	}
+
+	// Last line: should be " */"
+	lastLine := strings.TrimSpace(lines[len(lines)-1])
+	if lastLine == "*/" {
+		formattedLines = append(formattedLines, indent + " */")
+	} else if strings.HasSuffix(lastLine, "*/") {
+		// Handle case where last line has content and */
+		if len(lastLine) > 2 {
+			content := strings.TrimSpace(lastLine[:len(lastLine)-2])
+			if content != "" {
+				// Remove leading star if present
+				if strings.HasPrefix(content, "*") {
+					content = strings.TrimSpace(content[1:])
+				}
+				if content != "" {
+					formattedLines = append(formattedLines, indent + " * " + content)
+				}
+			}
+		}
+		formattedLines = append(formattedLines, indent + " */")
+	} else {
+		// Add the last line content
+		if lastLine != "" {
+			if strings.HasPrefix(lastLine, "*") {
+				lastLine = " * " + strings.TrimSpace(lastLine[1:])
+			} else if !strings.HasPrefix(lastLine, " *") {
+				lastLine = " * " + lastLine
+			}
+			formattedLines = append(formattedLines, indent + lastLine)
+		}
+		formattedLines = append(formattedLines, indent + " */")
+	}
+
+	return strings.Join(formattedLines, "\n")
 }
 
 // formatScope formats scope definitions

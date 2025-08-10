@@ -251,6 +251,90 @@ func TestFormatterFieldAlignment(t *testing.T) {
 	t.Logf("Field alignment result:\n%s", strings.Join(fieldLines, "\n"))
 }
 
+func TestFormatterMultiLineComments(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name: "basic multi-line comment",
+			input: `/* Multi-line comment
+   about the service */
+service UserService {
+    User getUser(1: i64 userId)
+}`,
+			expected: `/**
+ * Multi-line comment
+ * about the service
+ */
+service UserService {
+    User getUser(1: i64 userId)
+}`,
+		},
+		{
+			name: "multi-line comment with proper stars already",
+			input: `/**
+ * Already properly formatted
+ * multi-line comment
+ */
+service UserService {
+}`,
+			expected: `/**
+ * Already properly formatted
+ * multi-line comment
+ */
+service UserService {}`,
+		},
+		{
+			name: "multi-line comment with misaligned stars",
+			input: `/*
+*Misaligned comment
+  *Mixed alignment
+   about the service
+*/
+service UserService {
+}`,
+			expected: `/**
+ * Misaligned comment
+ * Mixed alignment
+ * about the service
+ */
+service UserService {}`,
+		},
+		{
+			name: "multi-line comment with empty lines",
+			input: `/*
+Some text
+
+More text after empty line
+*/
+service UserService {
+}`,
+			expected: `/**
+ * Some text
+ *
+ * More text after empty line
+ */
+service UserService {}`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := testFormat(t, test.input)
+			
+			// Normalize whitespace for comparison
+			result = normalizeWhitespace(result)
+			expected := normalizeWhitespace(test.expected)
+			
+			if result != expected {
+				t.Errorf("Multi-line comment formatting failed.\nExpected:\n%s\nGot:\n%s", expected, result)
+			}
+		})
+	}
+}
+
 func TestFormattingProvider(t *testing.T) {
 	provider := NewFormattingProvider()
 
