@@ -216,6 +216,11 @@ func (s *Server) textDocumentDidChange(context *glsp.Context, params *protocol.D
 		s.symbolIndex.UpdateDocument(doc)
 
 		s.publishDiagnostics(context, doc)
+		
+		// Request semantic token refresh to update highlighting
+		if err := s.refreshSemanticTokens(context); err != nil {
+			s.logger.Printf("Error refreshing semantic tokens: %v", err)
+		}
 	}
 
 	return nil
@@ -271,7 +276,7 @@ func (s *Server) getServerCapabilities() protocol.ServerCapabilities {
 		// Document synchronization
 		TextDocumentSync: protocol.TextDocumentSyncOptions{
 			OpenClose: &[]bool{true}[0],
-			Change:    &[]protocol.TextDocumentSyncKind{protocol.TextDocumentSyncKindFull}[0],
+			Change:    &[]protocol.TextDocumentSyncKind{protocol.TextDocumentSyncKindIncremental}[0],
 			Save: &protocol.SaveOptions{
 				IncludeText: &[]bool{false}[0],
 			},
@@ -496,6 +501,14 @@ func (s *Server) textDocumentSemanticTokensFull(context *glsp.Context, params *p
 
 	s.logger.Printf("Provided %d semantic token data points for %s", len(tokens.Data), params.TextDocument.URI)
 	return tokens, nil
+}
+
+// refreshSemanticTokens sends a workspace/semanticTokens/refresh request to the client
+func (s *Server) refreshSemanticTokens(context *glsp.Context) error {
+	// Send a workspace/semanticTokens/refresh notification to the client
+	// This tells VS Code to re-request semantic tokens for all open documents
+	context.Notify(protocol.MethodWorkspaceSemanticTokensRefresh, nil)
+	return nil
 }
 
 // textDocumentSemanticTokensRange handles range semantic tokens requests
