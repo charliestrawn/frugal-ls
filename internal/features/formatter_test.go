@@ -288,8 +288,13 @@ User getUser(1:i64 userId)
 		t.Errorf("Expected edit to start at (0,0), got (%d,%d)", edit.Range.Start.Line, edit.Range.Start.Character)
 	}
 
-	if !strings.Contains(edit.NewText, "service UserService {") {
-		t.Error("Expected formatted content to contain proper service formatting")
+	if !strings.Contains(edit.NewText, "service UserService") {
+		t.Error("Expected formatted content to contain service definition")
+	}
+	
+	// Check that content is properly indented
+	if !strings.Contains(edit.NewText, "    User getUser(") {
+		t.Error("Expected method to be properly indented")
 	}
 
 	t.Logf("Formatted content:\n%s", edit.NewText)

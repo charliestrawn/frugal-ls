@@ -209,16 +209,16 @@ func (f *FormattingProvider) normalizeSpacing(line string) string {
 		}
 	}
 	
+	// Normalize multiple spaces to single spaces first
+	for strings.Contains(line, "  ") {
+		line = strings.ReplaceAll(line, "  ", " ")
+	}
+	
 	// Trim spaces inside parentheses for method parameter lists
 	// Remove space after opening paren: "( " -> "("
 	line = strings.ReplaceAll(line, "( ", "(")
 	// Remove space before closing paren: " )" -> ")"
 	line = strings.ReplaceAll(line, " )", ")")
-	
-	// Normalize multiple spaces to single spaces (but preserve intentional alignment)
-	for strings.Contains(line, "  ") {
-		line = strings.ReplaceAll(line, "  ", " ")
-	}
 	
 	return line
 }
