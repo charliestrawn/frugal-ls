@@ -1,6 +1,7 @@
 package document
 
 import (
+	"strings"
 	"testing"
 
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -259,6 +260,115 @@ func TestDocumentDidChangeIncremental(t *testing.T) {
 	// Verify document was re-parsed
 	if updatedDoc2.ParseResult == nil {
 		t.Fatal("Document should be re-parsed after incremental change")
+	}
+}
+
+func TestDocumentDidChangeRealWorldTyping(t *testing.T) {
+	manager, err := NewManager()
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+	defer manager.Close()
+
+	uri := "file:///test.frugal"
+	initialContent := `struct User {
+    1: string name
+}`
+
+	// Open document
+	openParams := &protocol.DidOpenTextDocumentParams{
+		TextDocument: protocol.TextDocumentItem{
+			URI:        uri,
+			LanguageID: "frugal",
+			Version:    1,
+			Text:       initialContent,
+		},
+	}
+
+	_, err = manager.DidOpen(openParams)
+	if err != nil {
+		t.Fatalf("DidOpen failed: %v", err)
+	}
+
+	// Simulate typing "struct NewType {" at the end of the document
+	// This is a common scenario that was causing issues
+	changeParams := &protocol.DidChangeTextDocumentParams{
+		TextDocument: protocol.VersionedTextDocumentIdentifier{
+			TextDocumentIdentifier: protocol.TextDocumentIdentifier{URI: uri},
+			Version:                2,
+		},
+		ContentChanges: []any{
+			protocol.TextDocumentContentChangeEvent{
+				Range: &protocol.Range{
+					Start: protocol.Position{Line: 2, Character: 1}, // After the closing brace
+					End:   protocol.Position{Line: 2, Character: 1},
+				},
+				Text: "\n\nstruct NewType {\n    1: i32 id\n}",
+			},
+		},
+	}
+
+	updatedDoc, err := manager.DidChange(changeParams)
+	if err != nil {
+		t.Fatalf("DidChange failed: %v", err)
+	}
+
+	expectedContent := `struct User {
+    1: string name
+}
+
+struct NewType {
+    1: i32 id
+}`
+
+	if string(updatedDoc.Content) != expectedContent {
+		t.Errorf("Real-world typing simulation failed.\nExpected:\n%q\nGot:\n%q", expectedContent, string(updatedDoc.Content))
+	}
+
+	// Test typing character by character (more realistic)
+	// Start with clean state
+	openParams2 := &protocol.DidOpenTextDocumentParams{
+		TextDocument: protocol.TextDocumentItem{
+			URI:        "file:///test2.frugal",
+			LanguageID: "frugal",
+			Version:    1,
+			Text:       "",
+		},
+	}
+	
+	doc2, err := manager.DidOpen(openParams2)
+	if err != nil {
+		t.Fatalf("DidOpen failed for test2: %v", err)
+	}
+
+	// Type "struct " character by character
+	chars := []string{"s", "t", "r", "u", "c", "t", " "}
+	for i, char := range chars {
+		changeParams := &protocol.DidChangeTextDocumentParams{
+			TextDocument: protocol.VersionedTextDocumentIdentifier{
+				TextDocumentIdentifier: protocol.TextDocumentIdentifier{URI: "file:///test2.frugal"},
+				Version:                int32(i + 2),
+			},
+			ContentChanges: []any{
+				protocol.TextDocumentContentChangeEvent{
+					Range: &protocol.Range{
+						Start: protocol.Position{Line: 0, Character: uint32(i)},
+						End:   protocol.Position{Line: 0, Character: uint32(i)},
+					},
+					Text: char,
+				},
+			},
+		}
+
+		doc2, err = manager.DidChange(changeParams)
+		if err != nil {
+			t.Fatalf("Character-by-character typing failed at char %d (%s): %v", i, char, err)
+		}
+		
+		expectedPartial := strings.Join(chars[:i+1], "")
+		if string(doc2.Content) != expectedPartial {
+			t.Errorf("Character-by-character typing failed at step %d.\nExpected: %q\nGot: %q", i, expectedPartial, string(doc2.Content))
+		}
 	}
 }
 

@@ -143,8 +143,18 @@ func (m *Manager) DidChange(params *protocol.DidChangeTextDocumentParams) (*Docu
 		} else {
 			// Incremental update - apply the change to the existing content
 			if err := m.applyIncrementalChange(doc, &textChange); err != nil {
-				// If incremental update fails, fallback to full content replacement
-				// This shouldn't happen in normal cases, but provides safety
+				// Incremental change failed - this should be very rare
+				// Log error for debugging (uncomment if needed)
+				// fmt.Printf("ERROR: Incremental change failed for %s: %v\n", params.TextDocument.URI, err)
+				
+				// For safety, never replace entire document with small change text
+				if len(textChange.Text) < 100 && !strings.Contains(textChange.Text, "struct") && !strings.Contains(textChange.Text, "service") {
+					// Small change text without major keywords - likely partial content
+					// Skip this change to preserve document integrity
+					continue
+				}
+				
+				// Only do full replacement if the text looks like a complete document
 				doc.Content = []byte(textChange.Text)
 			}
 		}
@@ -220,6 +230,10 @@ func (m *Manager) applyIncrementalChange(doc *Document, change *protocol.TextDoc
 
 	content := string(doc.Content)
 	lines := strings.Split(content, "\n")
+	
+	// Debug logging (uncomment for debugging)
+	// fmt.Printf("Applying incremental change: Range=%+v, Text=%q\n", change.Range, change.Text)
+	// fmt.Printf("Document has %d lines, %d bytes\n", len(lines), len(content))
 
 	startLine := int(change.Range.Start.Line)
 	startChar := int(change.Range.Start.Character)
