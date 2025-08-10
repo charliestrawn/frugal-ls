@@ -164,6 +164,104 @@ func TestDocumentDidChange(t *testing.T) {
 	}
 }
 
+func TestDocumentDidChangeIncremental(t *testing.T) {
+	manager, err := NewManager()
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+	defer manager.Close()
+
+	uri := "file:///test.frugal"
+	initialContent := `struct User {
+    1: string name
+}`
+
+	// Open document first
+	openParams := &protocol.DidOpenTextDocumentParams{
+		TextDocument: protocol.TextDocumentItem{
+			URI:        uri,
+			LanguageID: "frugal",
+			Version:    1,
+			Text:       initialContent,
+		},
+	}
+
+	_, err = manager.DidOpen(openParams)
+	if err != nil {
+		t.Fatalf("DidOpen failed: %v", err)
+	}
+
+	// Test incremental change - add a comma after "name"
+	// The content is: "struct User {\n    1: string name\n}"
+	// Line 1 is "    1: string name" (0-indexed), so "name" ends at character 16 (0-indexed)
+	changeParams := &protocol.DidChangeTextDocumentParams{
+		TextDocument: protocol.VersionedTextDocumentIdentifier{
+			TextDocumentIdentifier: protocol.TextDocumentIdentifier{URI: uri},
+			Version:                2,
+		},
+		ContentChanges: []any{
+			protocol.TextDocumentContentChangeEvent{
+				Range: &protocol.Range{
+					Start: protocol.Position{Line: 1, Character: 18}, // After "name"
+					End:   protocol.Position{Line: 1, Character: 18},
+				},
+				Text: ",",
+			},
+		},
+	}
+
+	updatedDoc, err := manager.DidChange(changeParams)
+	if err != nil {
+		t.Fatalf("DidChange failed: %v", err)
+	}
+
+	expectedContent := `struct User {
+    1: string name,
+}`
+
+	if string(updatedDoc.Content) != expectedContent {
+		t.Errorf("Incremental change failed.\nExpected:\n%q\nGot:\n%q", expectedContent, string(updatedDoc.Content))
+	}
+
+	// Test incremental change - add a new field
+	// Current content is: "struct User {\n    1: string name,\n}"
+	// Line 1 is "    1: string name," so after the comma is character 17
+	changeParams2 := &protocol.DidChangeTextDocumentParams{
+		TextDocument: protocol.VersionedTextDocumentIdentifier{
+			TextDocumentIdentifier: protocol.TextDocumentIdentifier{URI: uri},
+			Version:                3,
+		},
+		ContentChanges: []any{
+			protocol.TextDocumentContentChangeEvent{
+				Range: &protocol.Range{
+					Start: protocol.Position{Line: 1, Character: 19}, // After "name,"
+					End:   protocol.Position{Line: 1, Character: 19},
+				},
+				Text: "\n    2: i64 id",
+			},
+		},
+	}
+
+	updatedDoc2, err := manager.DidChange(changeParams2)
+	if err != nil {
+		t.Fatalf("Second DidChange failed: %v", err)
+	}
+
+	expectedContent2 := `struct User {
+    1: string name,
+    2: i64 id
+}`
+
+	if string(updatedDoc2.Content) != expectedContent2 {
+		t.Errorf("Second incremental change failed.\nExpected:\n%q\nGot:\n%q", expectedContent2, string(updatedDoc2.Content))
+	}
+
+	// Verify document was re-parsed
+	if updatedDoc2.ParseResult == nil {
+		t.Fatal("Document should be re-parsed after incremental change")
+	}
+}
+
 func TestDocumentDidClose(t *testing.T) {
 	manager, err := NewManager()
 	if err != nil {

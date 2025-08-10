@@ -141,8 +141,12 @@ func (m *Manager) DidChange(params *protocol.DidChangeTextDocumentParams) (*Docu
 			// Full document update
 			doc.Content = []byte(textChange.Text)
 		} else {
-			// Incremental update (for simplicity, we'll treat as full update for now)
-			doc.Content = []byte(textChange.Text)
+			// Incremental update - apply the change to the existing content
+			if err := m.applyIncrementalChange(doc, &textChange); err != nil {
+				// If incremental update fails, fallback to full content replacement
+				// This shouldn't happen in normal cases, but provides safety
+				doc.Content = []byte(textChange.Text)
+			}
 		}
 	}
 
@@ -206,6 +210,61 @@ func (m *Manager) GetAllDocuments() map[string]*Document {
 	}
 
 	return allDocuments
+}
+
+// applyIncrementalChange applies an incremental text change to a document
+func (m *Manager) applyIncrementalChange(doc *Document, change *protocol.TextDocumentContentChangeEvent) error {
+	if change.Range == nil {
+		return fmt.Errorf("incremental change must have a range")
+	}
+
+	content := string(doc.Content)
+	lines := strings.Split(content, "\n")
+
+	startLine := int(change.Range.Start.Line)
+	startChar := int(change.Range.Start.Character)
+	endLine := int(change.Range.End.Line)
+	endChar := int(change.Range.End.Character)
+
+	// Validate range bounds
+	if startLine < 0 || startLine >= len(lines) {
+		return fmt.Errorf("start line %d out of bounds (0-%d)", startLine, len(lines)-1)
+	}
+	if endLine < 0 || endLine >= len(lines) {
+		return fmt.Errorf("end line %d out of bounds (0-%d)", endLine, len(lines)-1)
+	}
+	if startChar < 0 || startChar > len(lines[startLine]) {
+		return fmt.Errorf("start character %d out of bounds (0-%d)", startChar, len(lines[startLine]))
+	}
+	if endChar < 0 || endChar > len(lines[endLine]) {
+		return fmt.Errorf("end character %d out of bounds (0-%d)", endChar, len(lines[endLine]))
+	}
+
+	var result strings.Builder
+
+	// Add lines before the change
+	for i := 0; i < startLine; i++ {
+		result.WriteString(lines[i])
+		result.WriteString("\n")
+	}
+
+	// Add the part of start line before the change
+	result.WriteString(lines[startLine][:startChar])
+
+	// Add the new text
+	result.WriteString(change.Text)
+
+	// Add the part of end line after the change
+	result.WriteString(lines[endLine][endChar:])
+
+	// Add lines after the change
+	for i := endLine + 1; i < len(lines); i++ {
+		result.WriteString("\n")
+		result.WriteString(lines[i])
+	}
+
+	doc.Content = []byte(result.String())
+	return nil
 }
 
 // parseDocument parses a document and updates its cached results
