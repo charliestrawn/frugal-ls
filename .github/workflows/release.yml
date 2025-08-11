@@ -30,8 +30,12 @@ jobs:
       run: |
         mkdir -p dist
         
-        # Build for Linux AMD64 (native build with CGO)
-        go build -ldflags="-s -w" -o dist/frugal-ls-linux-amd64 ./cmd/frugal-ls
+        # Build for multiple platforms with CGO enabled
+        # Linux AMD64 (native)
+        GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -ldflags="-s -w" -o dist/frugal-ls-linux-amd64 ./cmd/frugal-ls
+        
+        # Note: ARM64 and Darwin builds require cross-compilation toolchains
+        # For releases, we'll add more platforms as needed
     
     - name: Setup Node.js for VS Code extension
       uses: actions/setup-node@v4
