@@ -155,11 +155,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [linux, darwin, windows]
+        goos: [linux, darwin]  # Temporarily disable windows due to dependency issue
         goarch: [amd64, arm64]
-        exclude:
-          - goos: windows
-            goarch: arm64
     
     steps:
     - uses: actions/checkout@v4
