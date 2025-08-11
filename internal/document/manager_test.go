@@ -340,6 +340,11 @@ struct NewType {
 	if err != nil {
 		t.Fatalf("DidOpen failed for test2: %v", err)
 	}
+	
+	// Verify initial empty content
+	if string(doc2.Content) != "" {
+		t.Errorf("Expected empty initial content, got %q", string(doc2.Content))
+	}
 
 	// Type "struct " character by character
 	chars := []string{"s", "t", "r", "u", "c", "t", " "}

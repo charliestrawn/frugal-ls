@@ -54,7 +54,6 @@ func (f *FormattingProvider) ProvideDocumentRangeFormatting(doc *document.Docume
 	return f.ProvideDocumentFormatting(doc, options)
 }
 
-
 // getIndentString returns the indentation string based on formatting options
 func (f *FormattingProvider) getIndentString(options protocol.FormattingOptions) string {
 	// Check if insertSpaces is set to true
@@ -87,7 +86,6 @@ func (f *FormattingProvider) isClosingBrace(line string) bool {
 	line = strings.TrimSpace(line)
 	return line == "}" || strings.HasPrefix(line, "}")
 }
-
 
 // formatDocumentConservatively applies proper indentation and basic spacing normalization
 func (f *FormattingProvider) formatDocumentConservatively(source []byte, options protocol.FormattingOptions) string {

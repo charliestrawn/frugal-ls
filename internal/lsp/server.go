@@ -134,7 +134,7 @@ func (s *Server) initialize(context *glsp.Context, params *protocol.InitializePa
 	s.logger.Printf("Initialize request from client: %s", params.ClientInfo.Name)
 
 	// Update workspace roots from initialize params
-	if params.WorkspaceFolders != nil && len(params.WorkspaceFolders) > 0 {
+	if len(params.WorkspaceFolders) > 0 {
 		s.workspaceRoots = nil
 		for _, folder := range params.WorkspaceFolders {
 			s.workspaceRoots = append(s.workspaceRoots, folder.URI)

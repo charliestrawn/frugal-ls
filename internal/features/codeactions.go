@@ -831,7 +831,6 @@ func (c *CodeActionProvider) generateUpdatedMethodSignature(functionNode *tree_s
 	return signature
 }
 
-
 // extractReturnType extracts the return type from a function definition
 func (c *CodeActionProvider) extractReturnType(functionNode *tree_sitter.Node, source []byte) string {
 	// Look for function_type node which contains the return type

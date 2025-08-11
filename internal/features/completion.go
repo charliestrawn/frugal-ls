@@ -396,4 +396,3 @@ func (c *CompletionProvider) getSymbolCompletions(doc *document.Document, positi
 
 	return completions
 }
-

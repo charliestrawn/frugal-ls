@@ -155,7 +155,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [linux, darwin]  # Temporarily disable windows due to dependency issue
+        goos: [linux, darwin]  # Windows users can build from source
         goarch: [amd64, arm64]
     
     steps:

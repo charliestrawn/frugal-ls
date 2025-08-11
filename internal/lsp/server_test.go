@@ -254,7 +254,7 @@ service UserService {
 	if err != nil {
 		t.Errorf("Document symbols failed: %v", err)
 	}
-	if symbols == nil || len(symbols) == 0 {
+	if len(symbols) == 0 {
 		t.Error("Document should have symbols")
 	}
 }

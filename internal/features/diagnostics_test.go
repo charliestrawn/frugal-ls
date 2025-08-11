@@ -127,7 +127,6 @@ func TestDiagnosticsInvalidFieldId(t *testing.T) {
 	}
 }
 
-
 func TestDiagnosticsMethodParameterFieldIds(t *testing.T) {
 	provider := NewDiagnosticsProvider()
 

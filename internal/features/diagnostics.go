@@ -245,7 +245,6 @@ func (d *DiagnosticsProvider) determineFieldListContext(fieldList *tree_sitter.N
 	return "parameter list"
 }
 
-
 // validateSingleFieldList validates field IDs within a single field list
 func (d *DiagnosticsProvider) validateSingleFieldList(doc *document.Document, fieldListNode *tree_sitter.Node, contextName string) []protocol.Diagnostic {
 	diagnostics := make([]protocol.Diagnostic, 0)
