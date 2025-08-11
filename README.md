@@ -1,213 +1,235 @@
 # Frugal Language Server Protocol (LSP) Implementation
 
-A comprehensive Language Server Protocol implementation for Frugal IDL files, built with Go and tree-sitter parsing.
+> **⚠️ Important Note**: Frugal was originally an open-source project by Workiva that extended Apache Thrift with pub/sub messaging. However, Frugal is no longer open source. This project is a personal learning exercise and toy implementation based on my fork of the original grammar and specification. It is not affiliated with or endorsed by Workiva.
 
-## Overview
-
-Frugal is an extension to Apache Thrift that adds pub/sub "scope" constructs for efficient publish/subscribe messaging patterns. This LSP implementation provides full language support for Frugal IDL files including syntax highlighting, code completion, hover information, go-to-definition, and more.
+A comprehensive Language Server Protocol implementation for Frugal IDL files, providing modern IDE features like syntax highlighting, code completion, diagnostics, and more.
 
 ## Features
 
 ### Core Language Features
-- **Syntax Error Detection** - Real-time diagnostics with syntax error reporting
+- **Syntax Error Detection** - Real-time diagnostics with detailed error reporting
 - **Code Completion** - Context-aware completions for types, services, and identifiers
 - **Hover Information** - Rich documentation on hover with type information
 - **Go to Definition** - Navigate to symbol definitions across files
+- **Find References** - Find all references to symbols throughout the workspace
 - **Document Symbols** - Hierarchical outline view of file structure
 - **Workspace Symbols** - Search symbols across the entire workspace
+- **Rename Symbol** - Rename symbols with validation and conflict detection
+- **Document Formatting** - Automatic code formatting with consistent style
+- **Semantic Syntax Highlighting** - Enhanced syntax highlighting based on semantic analysis
+- **Document Highlights** - Highlight all occurrences of the symbol under cursor
 
-### Advanced Features (Phase 4)
-- **Cross-file Includes Resolution** - Full support for include statements and dependency tracking
-- **Code Actions & Quick Fixes** - Automated fixes for common syntax errors and refactoring actions
-- **Document Formatting** - Automatic code formatting with configurable indentation
-- **VS Code Extension** - Complete VS Code integration with syntax highlighting
-
-### Code Actions Include:
-- Fix missing semicolons and parentheses
-- Extract methods from services
-- Add fields to structs
-- Generate constructors
-- Add missing includes
-- Organize includes
-- Generate service and scope templates
+### Advanced Features
+- **Cross-file Include Resolution** - Full support for include statements and dependency tracking
+- **Code Actions & Quick Fixes** - Automated refactoring and code improvements:
+  - Extract method parameters to struct
+  - Add missing fields to structs
+  - Generate method stubs
+  - Organize includes
+- **VS Code Extension** - Complete VS Code integration with syntax highlighting and language features
 
 ## Installation
 
-### Build from Source
+### Option 1: Download Pre-built Binary (Recommended)
 
-1. **Clone the repository:**
+Download the latest release from [GitHub Releases](https://github.com/charliestrawn/frugal-ls/releases):
+
+```bash
+# Download the binary (Linux AMD64)
+wget https://github.com/charliestrawn/frugal-ls/releases/download/v0.1.0/frugal-ls-linux-amd64
+
+# Make it executable and install
+chmod +x frugal-ls-linux-amd64
+sudo mv frugal-ls-linux-amd64 /usr/local/bin/frugal-ls
+```
+
+### Option 2: Build from Source
+
+1. **Prerequisites:**
+   - Go 1.23+ 
+   - Git
+
+2. **Clone and build:**
    ```bash
    git clone https://github.com/charliestrawn/frugal-ls
    cd frugal-ls
-   ```
-
-2. **Build the language server:**
-   ```bash
    go build -o frugal-ls ./cmd/frugal-ls
    ```
 
-3. **Install the VS Code extension:**
-   ```bash
-   cd vscode-extension
-   npm install
-   npm run compile
-   ```
+### VS Code Extension
+
+#### Option 1: Download from Release
+1. Download `frugal-ls-0.1.0.vsix` from [GitHub Releases](https://github.com/charliestrawn/frugal-ls/releases)
+2. Install via VS Code: `code --install-extension frugal-ls-0.1.0.vsix`
+3. Or install via VS Code UI: Command Palette → "Extensions: Install from VSIX"
+
+#### Option 2: Build from Source
+```bash
+cd vscode-extension
+npm install
+npm run compile
+npm install -g @vscode/vsce
+vsce package
+code --install-extension frugal-ls-0.1.0.vsix
+```
 
 ## Usage
 
-### Command Line
-
-Run the language server directly:
-```bash
-./frugal-ls
-```
-
-Test parsing on a Frugal file:
-```bash
-./frugal-ls -test sample.frugal
-```
-
-### VS Code Integration
-
-1. Install the extension from the `vscode-extension` directory
-2. Configure the path to the `frugal-ls` binary in VS Code settings
+### VS Code
+1. Install the extension (see above)
+2. Ensure `frugal-ls` is in your PATH, or configure the path in settings
 3. Open any `.frugal` file to activate language support
 
-### Neovim Integration
+### Other Editors
 
-#### Quick Setup (Kickstart.nvim)
-If you're using kickstart.nvim, add this to your servers table in `init.lua`:
-
+#### Neovim with nvim-lspconfig
 ```lua
-local servers = {
-  -- ... your existing servers
-  frugal_ls = {
-    filetypes = { 'frugal' },
-  },
-}
+-- Add to your LSP configuration
+require('lspconfig').frugal_ls.setup({
+  cmd = { "frugal-ls" },
+  filetypes = { "frugal" },
+  root_dir = require('lspconfig.util').root_pattern(".git"),
+})
 ```
 
-Then copy the filetype detection:
+#### Vim/Neovim with vim-lsp
+```vim
+if executable('frugal-ls')
+    autocmd User lsp_setup call lsp#register_server({
+        \ 'name': 'frugal-ls',
+        \ 'cmd': {server_info->['frugal-ls']},
+        \ 'allowlist': ['frugal'],
+        \ })
+endif
+```
+
+#### Emacs with lsp-mode
+```elisp
+(add-to-list 'lsp-language-id-configuration '(frugal-mode . "frugal"))
+(lsp-register-client
+ (make-lsp-client :new-connection (lsp-stdio-connection "frugal-ls")
+                  :major-modes '(frugal-mode)
+                  :server-id 'frugal-ls))
+```
+
+### Command Line Testing
 ```bash
-mkdir -p ~/.config/nvim/ftdetect/
-cp nvim-integration/ftdetect/frugal.lua ~/.config/nvim/ftdetect/
+# Test the language server
+frugal-ls --version
+
+# Test parsing a file
+frugal-ls --test sample.frugal
 ```
 
-#### Full Installation
-Use the automated installer:
-```bash
-cd nvim-integration
-./install.sh
-```
+## Configuration
 
-Or see `nvim-integration/README.md` for detailed manual setup instructions.
+### VS Code Settings
+- `frugal-ls.server.path`: Path to the frugal-ls executable (default: "frugal-ls")
+- `frugal-ls.server.args`: Additional arguments for the server (default: [])
+- `frugal-ls.trace.server`: Enable communication tracing (default: "off")
 
-### Configuration
+## Example Frugal Code
 
-VS Code settings:
-- `frugal-ls.server.path`: Path to the frugal-ls executable
-- `frugal-ls.server.args`: Additional arguments for the server
-- `frugal-ls.trace.server`: Enable communication tracing
-
-## Architecture
-
-### Project Structure
-```
-frugal-ls/
-├── cmd/frugal-ls/          # Main executable
-├── internal/
-│   ├── document/            # Document lifecycle management
-│   ├── features/            # Language feature providers
-│   │   ├── completion.go    # Code completion
-│   │   ├── hover.go         # Hover information
-│   │   ├── symbols.go       # Document/workspace symbols
-│   │   ├── definition.go    # Go-to-definition
-│   │   ├── codeactions.go   # Code actions and quick fixes
-│   │   └── formatting.go    # Document formatting
-│   ├── lsp/                 # LSP server implementation
-│   ├── parser/              # Tree-sitter parser wrapper
-│   └── workspace/           # Cross-file dependency resolution
-├── pkg/ast/                 # AST utilities and symbol extraction
-├── vscode-extension/        # VS Code extension
-├── nvim-integration/        # Neovim integration files
-│   ├── ftdetect/           # Filetype detection
-│   ├── after/syntax/       # Syntax highlighting
-│   ├── lua/plugins/        # Plugin configurations
-│   └── install.sh          # Automated installer
-└── sample.frugal           # Example Frugal file
-```
-
-### Technology Stack
-- **Go 1.21+** - Server implementation
-- **tree-sitter** - Syntax parsing with existing grammar
-- **GLSP** - LSP 3.16 protocol implementation
-- **TypeScript** - VS Code extension
-- **TextMate Grammar** - Syntax highlighting
-
-## Development Phases
-
-This project was built iteratively through 4 phases:
-
-1. **Phase 1** - Project setup and tree-sitter integration
-2. **Phase 2** - Core LSP server with document lifecycle and diagnostics
-3. **Phase 3** - Language features (completion, hover, symbols, definition)
-4. **Phase 4** - Advanced features (includes resolution, code actions, formatting, VS Code extension)
-
-## Example Usage
-
-Given a Frugal file like:
 ```frugal
 include "common.frugal"
 
 namespace go example
 
+// User service for managing user data
 service UserService {
     User getUser(1: i64 userId) throws (1: UserNotFound error),
-    void updateUser(1: User user)
+    void updateUser(1: User user),
+    list<User> getAllUsers()
 }
 
-scope UserEvents prefix "user" {
+// User events scope for pub/sub messaging
+scope UserEvents prefix "user.events" {
     UserCreated: User,
-    UserUpdated: User
+    UserUpdated: User,
+    UserDeleted: UserDeletion
 }
 
 struct User {
     1: required i64 id,
     2: optional string name,
-    3: optional string email
+    3: optional string email,
+    4: optional i64 createdAt
+}
+
+struct UserDeletion {
+    1: required i64 userId,
+    2: optional string reason
 }
 
 exception UserNotFound {
-    1: string message
+    1: string message = "User not found"
 }
 ```
 
-The LSP provides:
-- Syntax highlighting for all Frugal constructs
-- Code completion for types, services, and methods
-- Hover information showing full signatures and documentation
-- Go-to-definition across files (following includes)
-- Real-time syntax error detection
-- Code actions for common improvements
-- Automatic formatting
+## Architecture
+
+Built with modern tooling and best practices:
+
+- **Go 1.23+** - Server implementation with comprehensive test coverage
+- **Tree-sitter** - Fast, incremental parsing with syntax highlighting
+- **LSP 3.16** - Full Language Server Protocol compliance
+- **TypeScript** - VS Code extension with type safety
+- **GitHub Actions** - Automated CI/CD with cross-platform releases
+
+### Project Structure
+```
+frugal-ls/
+├── cmd/frugal-ls/          # Main executable and CLI
+├── internal/
+│   ├── document/           # Document lifecycle management
+│   ├── features/           # LSP feature implementations
+│   ├── lsp/               # LSP protocol server
+│   ├── parser/            # Tree-sitter parser integration
+│   └── workspace/         # Cross-file analysis and includes
+├── pkg/ast/               # AST utilities and symbol extraction
+├── vscode-extension/      # VS Code extension
+└── .github/workflows/     # CI/CD automation
+```
+
+## Development
+
+```bash
+# Run tests
+go test ./...
+
+# Run with race detection
+go test -race ./...
+
+# Build for development
+go build -o frugal-ls ./cmd/frugal-ls
+
+# Build VS Code extension
+cd vscode-extension
+npm install && npm run compile
+```
 
 ## Contributing
 
+This is primarily a personal learning project, but contributions are welcome:
+
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
+3. Add tests for new functionality
+4. Ensure all tests pass
 5. Submit a pull request
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT License - see [LICENSE](LICENSE) file for details.
 
-## About Frugal
+## About This Project
 
-Frugal extends Apache Thrift with additional constructs for pub/sub messaging:
-- **Scopes** - Define publish/subscribe event channels with prefixes
-- **Backward Compatibility** - Works with existing Thrift tooling
-- **Multi-language Support** - Generates code for Go, Java, Dart, Python, and more
+This language server implementation is a personal project created for learning purposes. It demonstrates:
 
-For more information about Frugal, visit the [Frugal documentation](https://github.com/Workiva/frugal).
+- Modern LSP server architecture
+- Tree-sitter parser integration
+- Comprehensive IDE feature implementation
+- Cross-platform distribution with GitHub Actions
+- Multi-editor support (VS Code, Neovim, Vim, Emacs)
+
+The original Frugal specification and grammar were created by Workiva as an extension to Apache Thrift for pub/sub messaging patterns.
