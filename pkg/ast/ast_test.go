@@ -7,6 +7,13 @@ import (
 	"frugal-ls/internal/parser"
 )
 
+const (
+	testUserName = "User"
+	testUserStructSimple = `struct User {
+    1: i64 id
+}`
+)
+
 func TestNodeTypeConstants(t *testing.T) {
 	// Test that all NodeType constants are properly defined
 	expectedTypes := map[NodeType]string{
@@ -81,7 +88,7 @@ service UserService {
 
 	// Verify struct symbol
 	structSymbol := symbols[0]
-	if structSymbol.Name != "User" {
+	if structSymbol.Name != testUserName {
 		t.Errorf("Expected struct symbol name 'User', got %q", structSymbol.Name)
 	}
 	if structSymbol.Type != NodeTypeStruct {
@@ -299,7 +306,7 @@ service UserService {
 	hasService := false
 
 	for _, symbol := range symbols {
-		if symbol.Type == NodeTypeStruct && symbol.Name == "User" {
+		if symbol.Type == NodeTypeStruct && symbol.Name == testUserName {
 			hasStruct = true
 		}
 		if symbol.Type == NodeTypeService && symbol.Name == "UserService" {
@@ -374,9 +381,7 @@ service UserService {
 }
 
 func TestGetTextBasic(t *testing.T) {
-	content := `struct User {
-    1: i64 id
-}`
+	content := testUserStructSimple
 
 	p, err := parser.NewParser()
 	if err != nil {
@@ -421,9 +426,7 @@ func TestGetTextBasic(t *testing.T) {
 }
 
 func TestSymbolStartPosition(t *testing.T) {
-	content := `struct User {
-    1: i64 id
-}`
+	content := testUserStructSimple
 
 	p, err := parser.NewParser()
 	if err != nil {
@@ -459,9 +462,7 @@ func TestSymbolStartPosition(t *testing.T) {
 
 // Test PrintTree doesn't panic
 func TestPrintTree(t *testing.T) {
-	content := `struct User {
-    1: i64 id
-}`
+	content := testUserStructSimple
 
 	p, err := parser.NewParser()
 	if err != nil {

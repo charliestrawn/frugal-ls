@@ -12,6 +12,19 @@ import (
 	"frugal-ls/pkg/ast"
 )
 
+const (
+	nodeTypeConst           = "const"
+	nodeTypeService         = "service"
+	nodeTypeStruct          = "struct"
+	nodeTypeException       = "exception"
+	nodeTypeEnum            = "enum"
+	nodeTypeScope           = "scope"
+	nodeTypeEnumDefinition  = "enum_definition"
+	nodeTypeServiceDefinition = "service_definition"
+	nodeTypeExceptionDefinition = "exception_definition"
+	nodeTypeTypedefDefinition = "typedef_definition"
+)
+
 // DiagnosticsProvider provides comprehensive diagnostics for Frugal files
 type DiagnosticsProvider struct{}
 
@@ -306,13 +319,13 @@ func (d *DiagnosticsProvider) checkNamingConventions(doc *document.Document, roo
 		var severity protocol.DiagnosticSeverity
 
 		switch defType {
-		case "service", "struct", "exception", "enum", "scope":
+		case nodeTypeService, nodeTypeStruct, nodeTypeException, nodeTypeEnum, nodeTypeScope:
 			// Should be PascalCase
 			if !d.isPascalCase(name) {
 				expectedPattern = "PascalCase"
 				severity = protocol.DiagnosticSeverityWarning
 			}
-		case "const":
+		case nodeTypeConst:
 			// Should be UPPER_SNAKE_CASE
 			if !d.isUpperSnakeCase(name) {
 				expectedPattern = "UPPER_SNAKE_CASE"
@@ -361,16 +374,16 @@ func (d *DiagnosticsProvider) walkDefinitions(root *tree_sitter.Node, content []
 		var nameNode *tree_sitter.Node
 
 		switch nodeType {
-		case "service_definition":
+		case nodeTypeServiceDefinition:
 			defType = "service"
 			nameNode = ast.FindNodeByType(node, "identifier")
 		case "struct_definition":
 			defType = "struct"
 			nameNode = ast.FindNodeByType(node, "identifier")
-		case "exception_definition":
+		case nodeTypeExceptionDefinition:
 			defType = "exception"
 			nameNode = ast.FindNodeByType(node, "identifier")
-		case "enum_definition":
+		case nodeTypeEnumDefinition:
 			defType = "enum"
 			nameNode = ast.FindNodeByType(node, "identifier")
 		case "scope_definition":
@@ -379,7 +392,7 @@ func (d *DiagnosticsProvider) walkDefinitions(root *tree_sitter.Node, content []
 		case "const_definition":
 			defType = "const"
 			nameNode = ast.FindNodeByType(node, "identifier")
-		case "typedef_definition":
+		case nodeTypeTypedefDefinition:
 			defType = "typedef"
 			// For typedef, find the alias name (second identifier)
 			identifiers := d.findAllNodes(node, "identifier")

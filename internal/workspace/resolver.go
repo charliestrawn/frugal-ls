@@ -185,10 +185,7 @@ func (r *IncludeResolver) resolveIncludePath(includePath, fromURI string) (strin
 	}
 
 	// Parse the source URI to get its directory
-	fromPath, err := uriToPath(fromURI)
-	if err != nil {
-		return "", fmt.Errorf("invalid source URI: %w", err)
-	}
+	fromPath := uriToPath(fromURI)
 
 	fromDir := filepath.Dir(fromPath)
 
@@ -294,11 +291,11 @@ func (r *IncludeResolver) hasCircularDependencyRecursive(currentURI, targetURI s
 }
 
 // uriToPath converts a file URI to a file system path
-func uriToPath(uri string) (string, error) {
+func uriToPath(uri string) string {
 	if strings.HasPrefix(uri, "file://") {
-		return uri[7:], nil // Remove "file://" prefix
+		return uri[7:] // Remove "file://" prefix
 	}
-	return uri, nil // Assume it's already a path
+	return uri // Assume it's already a path
 }
 
 // pathToURI converts a file system path to a file URI

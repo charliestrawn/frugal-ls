@@ -71,7 +71,7 @@ func (p *TreeSitterParser) Parse(source []byte) (*ParseResult, error) {
 }
 
 // collectErrors walks the syntax tree and collects parsing errors
-func (p *TreeSitterParser) collectErrors(node *tree_sitter.Node, source []byte) []ParseError {
+func (p *TreeSitterParser) collectErrors(node *tree_sitter.Node, _ []byte) []ParseError {
 	var errors []ParseError
 
 	if node.Kind() == "ERROR" {
@@ -98,7 +98,7 @@ func (p *TreeSitterParser) collectErrors(node *tree_sitter.Node, source []byte) 
 	childCount := node.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := node.Child(i)
-		childErrors := p.collectErrors(child, source)
+		childErrors := p.collectErrors(child, nil)
 		errors = append(errors, childErrors...)
 	}
 

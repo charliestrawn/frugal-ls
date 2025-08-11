@@ -7,6 +7,17 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+const (
+	testURI = "file:///test.frugal"
+	testUserStruct = `struct User {
+    1: string name,
+    2: i64 id
+}`
+	testUserStructShort = `struct User {
+    1: string name
+}`
+)
+
 func TestNewManager(t *testing.T) {
 	manager, err := NewManager()
 	if err != nil {
@@ -32,11 +43,8 @@ func TestDocumentDidOpen(t *testing.T) {
 	}
 	defer manager.Close()
 
-	uri := "file:///test.frugal"
-	content := `struct User {
-    1: string name,
-    2: i64 id
-}`
+	uri := testURI
+	content := testUserStruct
 
 	params := &protocol.DidOpenTextDocumentParams{
 		TextDocument: protocol.TextDocumentItem{
@@ -95,10 +103,8 @@ func TestDocumentDidChange(t *testing.T) {
 	}
 	defer manager.Close()
 
-	uri := "file:///test.frugal"
-	initialContent := `struct User {
-    1: string name
-}`
+	uri := testURI
+	initialContent := testUserStructShort
 
 	// Open document first
 	openParams := &protocol.DidOpenTextDocumentParams{
@@ -172,10 +178,8 @@ func TestDocumentDidChangeIncremental(t *testing.T) {
 	}
 	defer manager.Close()
 
-	uri := "file:///test.frugal"
-	initialContent := `struct User {
-    1: string name
-}`
+	uri := testURI
+	initialContent := testUserStructShort
 
 	// Open document first
 	openParams := &protocol.DidOpenTextDocumentParams{
@@ -270,10 +274,8 @@ func TestDocumentDidChangeRealWorldTyping(t *testing.T) {
 	}
 	defer manager.Close()
 
-	uri := "file:///test.frugal"
-	initialContent := `struct User {
-    1: string name
-}`
+	uri := testURI
+	initialContent := testUserStructShort
 
 	// Open document
 	openParams := &protocol.DidOpenTextDocumentParams{
@@ -340,7 +342,7 @@ struct NewType {
 	if err != nil {
 		t.Fatalf("DidOpen failed for test2: %v", err)
 	}
-	
+
 	// Verify initial empty content
 	if string(doc2.Content) != "" {
 		t.Errorf("Expected empty initial content, got %q", string(doc2.Content))
@@ -384,11 +386,8 @@ func TestDocumentDidClose(t *testing.T) {
 	}
 	defer manager.Close()
 
-	uri := "file:///test.frugal"
-	content := `struct User {
-    1: string name,
-    2: i64 id
-}`
+	uri := testURI
+	content := testUserStruct
 
 	// Open document first
 	openParams := &protocol.DidOpenTextDocumentParams{
@@ -441,7 +440,7 @@ func TestDocumentParsingErrors(t *testing.T) {
 	}
 	defer manager.Close()
 
-	uri := "file:///test.frugal"
+	uri := testURI
 	// Invalid content with syntax errors
 	invalidContent := `struct User {
     1: string name
@@ -580,7 +579,7 @@ func TestDocumentURIPath(t *testing.T) {
 		},
 		{
 			name:         "relative-like path",
-			uri:          "file:///test.frugal",
+			uri:          testURI,
 			expectedPath: "/test.frugal",
 		},
 	}
@@ -611,7 +610,7 @@ func TestDocumentURIPath(t *testing.T) {
 func TestDocumentNilParseResult(t *testing.T) {
 	// Create a document with no parse result
 	doc := &Document{
-		URI:         "file:///test.frugal",
+		URI:         testURI,
 		Path:        "/test.frugal",
 		Content:     []byte("test content"),
 		Version:     1,
@@ -636,7 +635,7 @@ func TestDocumentNilParseResult(t *testing.T) {
 func TestGetBasicParseErrorDiagnosticsNilParseResult(t *testing.T) {
 	// Create a document with no parse result
 	doc := &Document{
-		URI:         "file:///test.frugal",
+		URI:         testURI,
 		Path:        "/test.frugal",
 		Content:     []byte("test content"),
 		Version:     1,

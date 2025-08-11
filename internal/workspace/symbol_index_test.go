@@ -8,6 +8,10 @@ import (
 	"frugal-ls/pkg/ast"
 )
 
+const (
+	testUserName = "User"
+)
+
 func TestSymbolIndexBasic(t *testing.T) {
 	index := NewSymbolIndex()
 
@@ -112,7 +116,7 @@ enum UserStatus {
 	foundUserService := false
 	for _, symbol := range userSymbols {
 		t.Logf("Found symbol: %s (kind: %d)", symbol.Name, symbol.Kind)
-		if symbol.Name == "User" {
+		if symbol.Name == testUserName {
 			foundUserStruct = true
 		}
 		if symbol.Name == "UserService" {
@@ -301,7 +305,7 @@ struct Order {
 		if symbol.Name == "UserService" {
 			foundUserService = true
 		}
-		if symbol.Name == "User" {
+		if symbol.Name == testUserName {
 			foundUserStruct = true
 		}
 	}
