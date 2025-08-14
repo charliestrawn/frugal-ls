@@ -225,8 +225,8 @@ func (p *ReferencesProvider) getSymbolContext(node *tree_sitter.Node) string {
 		return "function"
 	case "field":
 		return "field"
-	case "enum_field":
-		return "enum_field"
+	case formatterNodeTypeEnumField:
+		return formatterNodeTypeEnumField
 	case "scope_operation":
 		return "scope_operation"
 	default:

@@ -71,7 +71,7 @@ func (d *DefinitionProvider) extractSymbolName(node *tree_sitter.Node, source []
 	nodeType := node.Kind()
 
 	// For identifiers, use the text directly
-	if nodeType == "identifier" {
+	if nodeType == nodeTypeIdentifier {
 		return ast.GetText(node, source)
 	}
 
@@ -254,7 +254,7 @@ func (d *DefinitionProvider) searchASTForReferences(symbolName string, node *tre
 	nodeText := ast.GetText(node, doc.Content)
 
 	// Check if this is a reference to the symbol
-	if nodeType == "identifier" && nodeText == symbolName {
+	if nodeType == nodeTypeIdentifier && nodeText == symbolName {
 		// Determine if this is a declaration or reference
 		isDeclaration := d.isInDeclarationContext(node, doc.Content)
 
@@ -291,7 +291,7 @@ func (d *DefinitionProvider) searchASTForReferences(symbolName string, node *tre
 }
 
 // isInDeclarationContext determines if an identifier node is in a declaration context
-func (d *DefinitionProvider) isInDeclarationContext(node *tree_sitter.Node, source []byte) bool {
+func (d *DefinitionProvider) isInDeclarationContext(node *tree_sitter.Node, _ []byte) bool {
 	// Walk up the parent chain to find declaration contexts
 	current := node
 	for current != nil {

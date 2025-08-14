@@ -86,7 +86,7 @@ func (p *DocumentHighlightProvider) getHighlightKind(doc *document.Document, r p
 	context := p.getSymbolContext(node)
 
 	switch context {
-	case "struct", "service", "enum", "exception", "scope":
+	case diagnosticsNodeTypeStruct, diagnosticsNodeTypeService, diagnosticsNodeTypeEnum, diagnosticsNodeTypeException, diagnosticsNodeTypeScope:
 		// Type definitions
 		if p.isDeclaration(node) {
 			kind := protocol.DocumentHighlightKindWrite
@@ -94,7 +94,7 @@ func (p *DocumentHighlightProvider) getHighlightKind(doc *document.Document, r p
 		}
 		kind := protocol.DocumentHighlightKindRead
 		return &kind
-	case "function":
+	case nodeTypeFunctionDefinition:
 		// Method/function definitions
 		if p.isDeclaration(node) {
 			kind := protocol.DocumentHighlightKindWrite
@@ -102,7 +102,7 @@ func (p *DocumentHighlightProvider) getHighlightKind(doc *document.Document, r p
 		}
 		kind := protocol.DocumentHighlightKindRead
 		return &kind
-	case "field", "enum_field":
+	case "field", formatterNodeTypeEnumField:
 		// Field definitions and references
 		if p.isDeclaration(node) {
 			kind := protocol.DocumentHighlightKindWrite
@@ -126,8 +126,8 @@ func (p *DocumentHighlightProvider) isDeclaration(node *tree_sitter.Node) bool {
 
 	// Check various declaration contexts
 	switch parent.Kind() {
-	case "struct_definition", "service_definition", "enum_definition",
-		"exception_definition", "scope_definition", "function_definition":
+	case nodeTypeStructDefinition, diagnosticsNodeTypeServiceDefinition, diagnosticsNodeTypeEnumDefinition,
+		diagnosticsNodeTypeExceptionDefinition, diagnosticsNodeTypeScopeDefinition, nodeTypeFunctionDefinition:
 		// If the identifier is the first child after the keyword, it's likely a declaration
 		childCount := parent.ChildCount()
 		for i := uint(0); i < childCount; i++ {
@@ -136,7 +136,7 @@ func (p *DocumentHighlightProvider) isDeclaration(node *tree_sitter.Node) bool {
 				return i == 1 // Usually keyword is at 0, name at 1
 			}
 		}
-	case "field", "enum_field":
+	case "field", formatterNodeTypeEnumField:
 		// Field declarations
 		return true
 	}

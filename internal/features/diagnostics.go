@@ -13,16 +13,19 @@ import (
 )
 
 const (
-	nodeTypeConst               = "const"
-	nodeTypeService             = "service"
-	nodeTypeStruct              = "struct"
-	nodeTypeException           = "exception"
-	nodeTypeEnum                = "enum"
-	nodeTypeScope               = "scope"
-	nodeTypeEnumDefinition      = "enum_definition"
-	nodeTypeServiceDefinition   = "service_definition"
-	nodeTypeExceptionDefinition = "exception_definition"
-	nodeTypeTypedefDefinition   = "typedef_definition"
+	diagnosticsNodeTypeConst               = "const"
+	diagnosticsNodeTypeService             = "service"
+	diagnosticsNodeTypeStruct              = "struct"
+	diagnosticsNodeTypeException           = "exception"
+	diagnosticsNodeTypeEnum                = "enum"
+	diagnosticsNodeTypeScope               = "scope"
+	diagnosticsNodeTypeEnumDefinition      = "enum_definition"
+	diagnosticsNodeTypeServiceDefinition   = "service_definition"
+	diagnosticsNodeTypeExceptionDefinition = "exception_definition"
+	diagnosticsNodeTypeTypedefDefinition   = "typedef_definition"
+	diagnosticsNodeTypeConstDefinition     = "const_definition"
+	diagnosticsNodeTypeScopeDefinition     = "scope_definition"
+	diagnosticsNodeTypeTypedef             = "typedef"
 )
 
 // DiagnosticsProvider provides comprehensive diagnostics for Frugal files
@@ -140,9 +143,9 @@ func (d *DiagnosticsProvider) checkFieldIdValidation(doc *document.Document, roo
 	d.walkNodes(root, func(node *tree_sitter.Node) {
 		nodeType := node.Kind()
 
-		if nodeType == "struct_definition" || nodeType == "exception_definition" {
+		if nodeType == nodeTypeStructDefinition || nodeType == diagnosticsNodeTypeExceptionDefinition {
 			diagnostics = append(diagnostics, d.validateStructFields(doc, node)...)
-		} else if nodeType == "function_definition" {
+		} else if nodeType == nodeTypeFunctionDefinition {
 			diagnostics = append(diagnostics, d.validateMethodFields(doc, node)...)
 		}
 	})
@@ -165,7 +168,7 @@ func (d *DiagnosticsProvider) validateStructFields(doc *document.Document, struc
 	childCount := structBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := structBody.Child(i)
-		if child.Kind() == "field" {
+		if child.Kind() == nodeTypeField {
 			fieldId, fieldIdNode := d.extractFieldId(child, doc.Content)
 			if fieldId == 0 {
 				continue // Skip if we couldn't extract field ID
@@ -230,7 +233,7 @@ func (d *DiagnosticsProvider) validateMethodFields(doc *document.Document, metho
 // determineFieldListContext determines if a field_list is parameters or throws
 func (d *DiagnosticsProvider) determineFieldListContext(fieldList *tree_sitter.Node) string {
 	parent := fieldList.Parent()
-	if parent == nil || parent.Kind() != "function_definition" {
+	if parent == nil || parent.Kind() != nodeTypeFunctionDefinition {
 		return "parameter list" // Default
 	}
 
@@ -266,7 +269,7 @@ func (d *DiagnosticsProvider) validateSingleFieldList(doc *document.Document, fi
 	childCount := fieldListNode.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := fieldListNode.Child(i)
-		if child.Kind() == "field" {
+		if child.Kind() == nodeTypeField {
 			fieldId, fieldIdNode := d.extractFieldId(child, doc.Content)
 			if fieldId == 0 {
 				continue
@@ -319,13 +322,13 @@ func (d *DiagnosticsProvider) checkNamingConventions(doc *document.Document, roo
 		var severity protocol.DiagnosticSeverity
 
 		switch defType {
-		case nodeTypeService, nodeTypeStruct, nodeTypeException, nodeTypeEnum, nodeTypeScope:
+		case diagnosticsNodeTypeService, diagnosticsNodeTypeStruct, diagnosticsNodeTypeException, diagnosticsNodeTypeEnum, diagnosticsNodeTypeScope:
 			// Should be PascalCase
 			if !d.isPascalCase(name) {
 				expectedPattern = "PascalCase"
 				severity = protocol.DiagnosticSeverityWarning
 			}
-		case nodeTypeConst:
+		case diagnosticsNodeTypeConst:
 			// Should be UPPER_SNAKE_CASE
 			if !d.isUpperSnakeCase(name) {
 				expectedPattern = "UPPER_SNAKE_CASE"
@@ -356,7 +359,7 @@ func (d *DiagnosticsProvider) checkTypeReferences(doc *document.Document, root *
 
 	// Check all type references
 	d.walkNodes(root, func(node *tree_sitter.Node) {
-		if node.Kind() == "field_type" {
+		if node.Kind() == nodeTypeFieldType {
 			d.validateTypeReference(doc, node, definedTypes, &diagnostics)
 		}
 	})
@@ -374,26 +377,26 @@ func (d *DiagnosticsProvider) walkDefinitions(root *tree_sitter.Node, content []
 		var nameNode *tree_sitter.Node
 
 		switch nodeType {
-		case nodeTypeServiceDefinition:
-			defType = "service"
+		case diagnosticsNodeTypeServiceDefinition:
+			defType = diagnosticsNodeTypeService
 			nameNode = ast.FindNodeByType(node, "identifier")
-		case "struct_definition":
-			defType = "struct"
+		case nodeTypeStructDefinition:
+			defType = diagnosticsNodeTypeStruct
 			nameNode = ast.FindNodeByType(node, "identifier")
-		case nodeTypeExceptionDefinition:
-			defType = "exception"
+		case diagnosticsNodeTypeExceptionDefinition:
+			defType = diagnosticsNodeTypeException
 			nameNode = ast.FindNodeByType(node, "identifier")
-		case nodeTypeEnumDefinition:
-			defType = "enum"
+		case diagnosticsNodeTypeEnumDefinition:
+			defType = diagnosticsNodeTypeEnum
 			nameNode = ast.FindNodeByType(node, "identifier")
-		case "scope_definition":
-			defType = "scope"
+		case diagnosticsNodeTypeScopeDefinition:
+			defType = diagnosticsNodeTypeScope
 			nameNode = ast.FindNodeByType(node, "identifier")
-		case "const_definition":
-			defType = "const"
+		case diagnosticsNodeTypeConstDefinition:
+			defType = diagnosticsNodeTypeConst
 			nameNode = ast.FindNodeByType(node, "identifier")
-		case nodeTypeTypedefDefinition:
-			defType = "typedef"
+		case diagnosticsNodeTypeTypedefDefinition:
+			defType = diagnosticsNodeTypeTypedef
 			// For typedef, find the alias name (second identifier)
 			identifiers := d.findAllNodes(node, "identifier")
 			if len(identifiers) > 0 {
@@ -471,7 +474,7 @@ func (d *DiagnosticsProvider) collectDefinedTypes(root *tree_sitter.Node, conten
 
 	// Add user-defined types
 	d.walkDefinitions(root, content, func(defType, name string, node *tree_sitter.Node) {
-		if defType == "struct" || defType == "exception" || defType == "enum" || defType == "typedef" {
+		if defType == diagnosticsNodeTypeStruct || defType == diagnosticsNodeTypeException || defType == diagnosticsNodeTypeEnum || defType == diagnosticsNodeTypeTypedef {
 			definedTypes[name] = true
 		}
 	})

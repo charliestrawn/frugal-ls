@@ -67,6 +67,7 @@ func (h *HoverProvider) ProvideHover(doc *document.Document, position protocol.P
 }
 
 // getHoverInfo extracts hover information for a given node
+//
 //nolint:gocognit // Hover info extraction requires handling many different node types
 func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Document) *protocol.MarkupContent {
 	nodeType := node.Kind()
@@ -136,7 +137,7 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 		}
 
 	// Handle type information
-	case "field_type":
+	case nodeTypeFieldType:
 		typeInfo := h.getTypeInfo(nodeText)
 		if typeInfo != "" {
 			content.WriteString(fmt.Sprintf("**Type**: `%s`\n\n%s", nodeText, typeInfo))

@@ -12,6 +12,18 @@ import (
 	"frugal-ls/pkg/ast"
 )
 
+const (
+	nodeTypeStructDefinition   = "struct_definition"
+	nodeTypeFunctionDefinition = "function_definition"
+	nodeTypeFieldList          = "field_list"
+	nodeTypeFieldType          = "field_type"
+	nodeTypeIdentifier         = "identifier"
+	nodeTypeThrows             = "throws"
+	nodeTypeBaseType           = "base_type"
+	nodeTypeField              = "field"
+	nodeTypeFieldID            = "field_id"
+)
+
 // FindNodeAtPosition finds the AST node at a specific line and character position
 func FindNodeAtPosition(node *tree_sitter.Node, source []byte, line, character uint) *tree_sitter.Node {
 	if node == nil {
@@ -144,7 +156,7 @@ func (c *CodeActionProvider) getRefactorActions(doc *document.Document, rng prot
 	}
 
 	// Generate constructor for struct
-	if node.Kind() == "struct_definition" {
+	if node.Kind() == nodeTypeStructDefinition {
 		action := c.createGenerateConstructorAction(doc, node)
 		if action != nil {
 			actions = append(actions, *action)
@@ -244,7 +256,7 @@ func (c *CodeActionProvider) createFixMissingSemicolon(doc *document.Document, d
 }
 
 // createExtractMethodAction creates an action to extract a method from service
-func (c *CodeActionProvider) createExtractMethodAction(doc *document.Document, rng protocol.Range, node *tree_sitter.Node) *protocol.CodeAction {
+func (c *CodeActionProvider) createExtractMethodAction(doc *document.Document, _ protocol.Range, node *tree_sitter.Node) *protocol.CodeAction {
 	// This is a placeholder for method extraction logic
 	// In a real implementation, this would analyze the selected code and extract it into a new method
 
@@ -286,8 +298,8 @@ func (c *CodeActionProvider) createExtractMethodAction(doc *document.Document, r
 }
 
 // createAddFieldAction creates an action to add a field to struct
-func (c *CodeActionProvider) createAddFieldAction(doc *document.Document, rng protocol.Range, node *tree_sitter.Node) *protocol.CodeAction {
-	structNode := c.findParentOfType(node, "struct_definition")
+func (c *CodeActionProvider) createAddFieldAction(doc *document.Document, _ protocol.Range, node *tree_sitter.Node) *protocol.CodeAction {
+	structNode := c.findParentOfType(node, nodeTypeStructDefinition)
 	if structNode == nil {
 		return nil
 	}
@@ -399,7 +411,7 @@ func (c *CodeActionProvider) createAddMissingIncludeAction(doc *document.Documen
 }
 
 // createOrganizeIncludesAction creates an action to organize includes
-func (c *CodeActionProvider) createOrganizeIncludesAction(doc *document.Document) *protocol.CodeAction {
+func (c *CodeActionProvider) createOrganizeIncludesAction(_ *document.Document) *protocol.CodeAction {
 	// This would sort and deduplicate include statements
 	// For now, we'll provide a placeholder
 
@@ -532,7 +544,7 @@ func (c *CodeActionProvider) getNextFieldID(structNode *tree_sitter.Node, source
 
 	// Walk through struct body to find existing field IDs
 	c.walkNode(structNode, func(node *tree_sitter.Node) bool {
-		if node.Kind() == "field_id" {
+		if node.Kind() == nodeTypeFieldID {
 			idText := ast.GetText(node, source)
 			if id, err := strconv.Atoi(strings.TrimSuffix(idText, ":")); err == nil {
 				if id > maxID {
@@ -548,7 +560,7 @@ func (c *CodeActionProvider) getNextFieldID(structNode *tree_sitter.Node, source
 
 // extractIdentifier extracts the identifier name from a definition node
 func (c *CodeActionProvider) extractIdentifier(node *tree_sitter.Node, source []byte) string {
-	nameNode := ast.FindNodeByType(node, "identifier")
+	nameNode := ast.FindNodeByType(node, nodeTypeIdentifier)
 	if nameNode != nil {
 		return ast.GetText(nameNode, source)
 	}
@@ -575,25 +587,25 @@ func (c *CodeActionProvider) walkNode(node *tree_sitter.Node, visitor func(*tree
 // isMethodWithMultipleParameters checks if a node is a method definition with multiple parameters
 func (c *CodeActionProvider) isMethodWithMultipleParameters(node *tree_sitter.Node) bool {
 	// Find the function definition node
-	functionNode := c.findParentOfType(node, "function_definition")
-	if functionNode == nil && node.Kind() == "function_definition" {
+	functionNode := c.findParentOfType(node, nodeTypeFunctionDefinition)
+	if functionNode == nil && node.Kind() == nodeTypeFunctionDefinition {
 		functionNode = node
 	}
 	if functionNode == nil {
 		return false
 	}
 
-	// Count parameters (they are represented as "field" nodes in the first field_list)
+	// Count parameters (they are represented as field nodes in the first field_list)
 	parameterCount := 0
 	childCount := functionNode.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := functionNode.Child(i)
-		if child.Kind() == "field_list" {
+		if child.Kind() == nodeTypeFieldList {
 			// This should be the parameter list (comes before throws)
 			fieldCount := child.ChildCount()
 			for j := uint(0); j < fieldCount; j++ {
 				field := child.Child(j)
-				if field.Kind() == "field" {
+				if field.Kind() == nodeTypeField {
 					parameterCount++
 				}
 			}
@@ -605,10 +617,10 @@ func (c *CodeActionProvider) isMethodWithMultipleParameters(node *tree_sitter.No
 }
 
 // createExtractParametersToStructAction creates a refactoring to extract parameters into a struct
-func (c *CodeActionProvider) createExtractParametersToStructAction(doc *document.Document, rng protocol.Range, node *tree_sitter.Node) *protocol.CodeAction {
+func (c *CodeActionProvider) createExtractParametersToStructAction(doc *document.Document, _ protocol.Range, node *tree_sitter.Node) *protocol.CodeAction {
 	// Find the function definition node
-	functionNode := c.findParentOfType(node, "function_definition")
-	if functionNode == nil && node.Kind() == "function_definition" {
+	functionNode := c.findParentOfType(node, nodeTypeFunctionDefinition)
+	if functionNode == nil && node.Kind() == nodeTypeFunctionDefinition {
 		functionNode = node
 	}
 	if functionNode == nil {
@@ -697,7 +709,7 @@ type Parameter struct {
 func (c *CodeActionProvider) extractMethodName(functionNode *tree_sitter.Node, source []byte) string {
 	var methodName string
 	c.walkNode(functionNode, func(n *tree_sitter.Node) bool {
-		if n.Kind() == "identifier" && n.Parent().Kind() == "function_definition" {
+		if n.Kind() == nodeTypeIdentifier && n.Parent().Kind() == nodeTypeFunctionDefinition {
 			methodName = ast.GetText(n, source)
 			return false // Stop walking once we find it
 		}
@@ -714,12 +726,12 @@ func (c *CodeActionProvider) extractParameters(functionNode *tree_sitter.Node, s
 	childCount := functionNode.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := functionNode.Child(i)
-		if child.Kind() == "field_list" {
+		if child.Kind() == nodeTypeFieldList {
 			// This should be the parameter list (comes before throws)
 			fieldCount := child.ChildCount()
 			for j := uint(0); j < fieldCount; j++ {
 				field := child.Child(j)
-				if field.Kind() == "field" {
+				if field.Kind() == nodeTypeField {
 					param := c.parseParameter(field, source)
 					if param.Name != "" {
 						parameters = append(parameters, param)
@@ -743,14 +755,14 @@ func (c *CodeActionProvider) parseParameter(fieldNode *tree_sitter.Node, source 
 		child := fieldNode.Child(i)
 
 		switch child.Kind() {
-		case "field_id":
+		case nodeTypeFieldID:
 			// Extract the number from field_id (e.g., "1:" -> "1")
 			idText := ast.GetText(child, source)
 			param.ID = strings.TrimSuffix(idText, ":")
-		case "field_type":
+		case nodeTypeFieldType:
 			// Extract type from field_type node
 			param.Type = c.extractTypeFromFieldType(child, source)
-		case "identifier":
+		case nodeTypeIdentifier:
 			// This should be the parameter name
 			param.Name = ast.GetText(child, source)
 		}
@@ -765,7 +777,7 @@ func (c *CodeActionProvider) extractTypeFromFieldType(fieldTypeNode *tree_sitter
 	childCount := fieldTypeNode.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := fieldTypeNode.Child(i)
-		if child.Kind() == "base_type" {
+		if child.Kind() == nodeTypeBaseType {
 			return c.extractTypeFromBaseType(child, source)
 		}
 	}
@@ -854,14 +866,14 @@ func (c *CodeActionProvider) extractThrowsClause(functionNode *tree_sitter.Node,
 	for i := uint(0); i < childCount; i++ {
 		child := functionNode.Child(i)
 
-		if child.Kind() == "throws" {
+		if child.Kind() == nodeTypeThrows {
 			foundThrows = true
 			throwsClause.WriteString("throws (")
 
 			// Look for the next field_list (throws specifications)
 			for j := i + 1; j < childCount; j++ {
 				nextChild := functionNode.Child(j)
-				if nextChild.Kind() == "field_list" {
+				if nextChild.Kind() == nodeTypeFieldList {
 					// Extract throw specifications
 					throwSpecs := c.extractThrowSpecs(nextChild, source)
 					throwsClause.WriteString(throwSpecs)
@@ -887,7 +899,7 @@ func (c *CodeActionProvider) extractThrowSpecs(fieldListNode *tree_sitter.Node, 
 	fieldCount := fieldListNode.ChildCount()
 	for i := uint(0); i < fieldCount; i++ {
 		field := fieldListNode.Child(i)
-		if field.Kind() == "field" {
+		if field.Kind() == nodeTypeField {
 			spec := c.extractThrowSpec(field, source)
 			if spec != "" {
 				specs = append(specs, spec)
@@ -907,11 +919,11 @@ func (c *CodeActionProvider) extractThrowSpec(fieldNode *tree_sitter.Node, sourc
 		child := fieldNode.Child(i)
 
 		switch child.Kind() {
-		case "field_id":
+		case nodeTypeFieldID:
 			id = ast.GetText(child, source)
-		case "field_type":
+		case nodeTypeFieldType:
 			exceptionType = c.extractTypeFromFieldType(child, source)
-		case "identifier":
+		case nodeTypeIdentifier:
 			name = ast.GetText(child, source)
 		}
 	}

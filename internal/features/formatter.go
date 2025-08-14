@@ -13,7 +13,13 @@ import (
 )
 
 const (
-	formatterNodeTypeHeader = "header"
+	formatterNodeTypeHeader               = "header"
+	formatterNodeTypeInclude              = "include"
+	formatterNodeTypeComment              = "comment"
+	formatterNodeTypeWhitespace           = "whitespace"
+	formatterNodeTypeNamespaceDeclaration = "namespace_declaration"
+	formatterNodeTypeScopeOperation       = "scope_operation"
+	formatterNodeTypeEnumField            = "enum_field"
 )
 
 // FrugalFormatter provides comprehensive AST-based formatting for Frugal files
@@ -89,7 +95,7 @@ func (f *FrugalFormatter) formatNode(node *tree_sitter.Node, source []byte, inde
 	switch nodeType {
 	case "document":
 		return f.formatDocument(node, source, indentLevel)
-	case "comment":
+	case formatterNodeTypeComment:
 		return f.formatComment(node, source, indentLevel)
 	case "definition":
 		// Handle the intermediate definition node
@@ -99,33 +105,33 @@ func (f *FrugalFormatter) formatNode(node *tree_sitter.Node, source []byte, inde
 			return f.formatNode(child, source, indentLevel) // Format the first child
 		}
 		return f.formatGenericNode(node, source, indentLevel)
-	case "include":
+	case formatterNodeTypeInclude:
 		return f.formatInclude(node, source)
 	case formatterNodeTypeHeader:
 		// Handle the header wrapper for includes
 		childCount := node.ChildCount()
 		for i := uint(0); i < childCount; i++ {
 			child := node.Child(i)
-			if child.Kind() == "include" {
+			if child.Kind() == formatterNodeTypeInclude {
 				return f.formatInclude(child, source)
 			}
 		}
 		return f.formatGenericNode(node, source, indentLevel)
-	case "namespace_declaration":
+	case formatterNodeTypeNamespaceDeclaration:
 		return f.formatNamespace(node, source)
-	case "service_definition":
+	case diagnosticsNodeTypeServiceDefinition:
 		return f.formatService(node, source, indentLevel)
-	case "scope_definition":
+	case diagnosticsNodeTypeScopeDefinition:
 		return f.formatScope(node, source, indentLevel)
-	case "struct_definition":
+	case nodeTypeStructDefinition:
 		return f.formatStruct(node, source, indentLevel)
-	case "enum_definition":
+	case diagnosticsNodeTypeEnumDefinition:
 		return f.formatEnum(node, source, indentLevel)
-	case "exception_definition":
+	case diagnosticsNodeTypeExceptionDefinition:
 		return f.formatException(node, source, indentLevel)
-	case "const_definition":
+	case diagnosticsNodeTypeConstDefinition:
 		return f.formatConst(node, source, indentLevel)
-	case "typedef_definition":
+	case diagnosticsNodeTypeTypedefDefinition:
 		return f.formatTypedef(node, source, indentLevel)
 	default:
 		// Default formatting for unknown nodes
@@ -134,8 +140,9 @@ func (f *FrugalFormatter) formatNode(node *tree_sitter.Node, source []byte, inde
 }
 
 // formatDocument formats the root document node
+//
 //nolint:gocognit // Complex formatting logic is inherently complex
-func (f *FrugalFormatter) formatDocument(node *tree_sitter.Node, source []byte, indentLevel int) string {
+func (f *FrugalFormatter) formatDocument(node *tree_sitter.Node, source []byte, _ int) string {
 	var sections []string
 	var currentSection []string
 
@@ -146,7 +153,7 @@ func (f *FrugalFormatter) formatDocument(node *tree_sitter.Node, source []byte, 
 		childType := child.Kind()
 
 		// Skip only whitespace, but preserve comments
-		if childType == "whitespace" {
+		if childType == formatterNodeTypeWhitespace {
 			continue
 		}
 
@@ -155,7 +162,7 @@ func (f *FrugalFormatter) formatDocument(node *tree_sitter.Node, source []byte, 
 			currentSection = append(currentSection, formatted)
 
 			// Comments don't trigger section breaks - they stay with the next definition
-			if childType == "comment" {
+			if childType == formatterNodeTypeComment {
 				continue
 			}
 
@@ -167,9 +174,9 @@ func (f *FrugalFormatter) formatDocument(node *tree_sitter.Node, source []byte, 
 			if shouldBreak {
 				// Special case: don't break between include and namespace if they are consecutive
 				// and namespace is the only thing after include (simple include + namespace case)
-				if actualChildType == "include" {
+				if actualChildType == formatterNodeTypeInclude {
 					nextChildType := f.getNextDefinitionType(node, source, i)
-					if nextChildType == "namespace_declaration" {
+					if nextChildType == formatterNodeTypeNamespaceDeclaration {
 						// Count remaining definitions - if only namespace left, don't break
 						remainingDefs := f.countRemainingDefinitions(node, source, i)
 						if remainingDefs == 1 {
@@ -208,8 +215,8 @@ func (f *FrugalFormatter) getActualDefinitionType(node *tree_sitter.Node) string
 			child := node.Child(i)
 			childType := child.Kind()
 			if strings.HasSuffix(childType, "_definition") ||
-				childType == "include" ||
-				childType == "namespace_declaration" {
+				childType == formatterNodeTypeInclude ||
+				childType == formatterNodeTypeNamespaceDeclaration {
 				return childType
 			}
 		}
@@ -219,10 +226,10 @@ func (f *FrugalFormatter) getActualDefinitionType(node *tree_sitter.Node) string
 		for i := uint(0); i < childCount; i++ {
 			child := node.Child(i)
 			childType := child.Kind()
-			if childType == "include" {
-				return "include"
+			if childType == formatterNodeTypeInclude {
+				return formatterNodeTypeInclude
 			} else if childType == "namespace" {
-				return "namespace_declaration"
+				return formatterNodeTypeNamespaceDeclaration
 			}
 		}
 	}
@@ -230,14 +237,14 @@ func (f *FrugalFormatter) getActualDefinitionType(node *tree_sitter.Node) string
 }
 
 // getNextDefinitionType looks ahead to find the next non-empty definition type
-func (f *FrugalFormatter) getNextDefinitionType(parentNode *tree_sitter.Node, source []byte, currentIndex uint) string {
+func (f *FrugalFormatter) getNextDefinitionType(parentNode *tree_sitter.Node, _ []byte, currentIndex uint) string {
 	childCount := parentNode.ChildCount()
 	for i := currentIndex + 1; i < childCount; i++ {
 		child := parentNode.Child(i)
 		childType := child.Kind()
 
 		// Skip whitespace and comments
-		if childType == "comment" || childType == "whitespace" {
+		if childType == formatterNodeTypeComment || childType == formatterNodeTypeWhitespace {
 			continue
 		}
 
@@ -248,7 +255,7 @@ func (f *FrugalFormatter) getNextDefinitionType(parentNode *tree_sitter.Node, so
 }
 
 // countRemainingDefinitions counts how many definitions are left after the current index
-func (f *FrugalFormatter) countRemainingDefinitions(parentNode *tree_sitter.Node, source []byte, currentIndex uint) int {
+func (f *FrugalFormatter) countRemainingDefinitions(parentNode *tree_sitter.Node, _ []byte, currentIndex uint) int {
 	count := 0
 	childCount := parentNode.ChildCount()
 	for i := currentIndex + 1; i < childCount; i++ {
@@ -256,7 +263,7 @@ func (f *FrugalFormatter) countRemainingDefinitions(parentNode *tree_sitter.Node
 		childType := child.Kind()
 
 		// Skip whitespace and comments
-		if childType == "comment" || childType == "whitespace" {
+		if childType == formatterNodeTypeComment || childType == formatterNodeTypeWhitespace {
 			continue
 		}
 
@@ -268,15 +275,15 @@ func (f *FrugalFormatter) countRemainingDefinitions(parentNode *tree_sitter.Node
 // shouldAddSectionBreak determines if we should add a section break after this node type
 func (f *FrugalFormatter) shouldAddSectionBreak(nodeType string) bool {
 	switch nodeType {
-	case "namespace_declaration", "include", formatterNodeTypeHeader:
+	case formatterNodeTypeNamespaceDeclaration, formatterNodeTypeInclude, formatterNodeTypeHeader:
 		return true
-	case "service_definition", "scope_definition":
+	case diagnosticsNodeTypeServiceDefinition, diagnosticsNodeTypeScopeDefinition:
 		return true
-	case "struct_definition", "exception_definition":
+	case nodeTypeStructDefinition, diagnosticsNodeTypeExceptionDefinition:
 		return false // Group structs and exceptions together
-	case "enum_definition":
+	case diagnosticsNodeTypeEnumDefinition:
 		return true // Separate enums from other definitions
-	case "const_definition", "typedef_definition":
+	case diagnosticsNodeTypeConstDefinition, diagnosticsNodeTypeTypedefDefinition:
 		return false // Group these together
 	default:
 		return false
@@ -379,6 +386,7 @@ func (f *FrugalFormatter) formatComment(node *tree_sitter.Node, source []byte, i
 }
 
 // formatMultiLineComment formats multi-line comments with proper star alignment
+//
 //nolint:gocognit // Complex comment formatting logic handles many edge cases
 func (f *FrugalFormatter) formatMultiLineComment(commentText, indent string) string {
 	lines := strings.Split(commentText, "\n")
@@ -683,7 +691,7 @@ func (f *FrugalFormatter) formatTypedef(node *tree_sitter.Node, source []byte, i
 	for i := uint(0); i < childCount; i++ {
 		child := node.Child(i)
 		switch child.Kind() {
-		case "field_type":
+		case nodeTypeFieldType:
 			baseType = strings.TrimSpace(ast.GetText(child, source))
 		case "identifier":
 			aliasName = strings.TrimSpace(ast.GetText(child, source))
@@ -757,7 +765,7 @@ func (f *FrugalFormatter) extractServiceMethods(serviceBody *tree_sitter.Node, s
 	childCount := serviceBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := serviceBody.Child(i)
-		if child.Kind() == "function_definition" {
+		if child.Kind() == nodeTypeFunctionDefinition {
 			method := f.formatServiceMethod(child, source)
 			if method != "" {
 				methods = append(methods, method)
@@ -812,7 +820,7 @@ func (f *FrugalFormatter) extractScopeEvents(scopeBody *tree_sitter.Node, source
 	childCount := scopeBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := scopeBody.Child(i)
-		if child.Kind() == "scope_operation" {
+		if child.Kind() == formatterNodeTypeScopeOperation {
 			event := strings.TrimSpace(ast.GetText(child, source))
 			// Remove trailing comma if present (it's handled separately)
 			event = strings.TrimSuffix(event, ",")
@@ -847,7 +855,7 @@ func (f *FrugalFormatter) extractStructFields(structBody *tree_sitter.Node, sour
 	childCount := structBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := structBody.Child(i)
-		if child.Kind() == "field" {
+		if child.Kind() == nodeTypeField {
 			field := strings.TrimSpace(ast.GetText(child, source))
 			if field != "" {
 				field = f.normalizeFieldDefinition(field)
@@ -878,7 +886,7 @@ func (f *FrugalFormatter) extractEnumValues(enumBody *tree_sitter.Node, source [
 	childCount := enumBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := enumBody.Child(i)
-		if child.Kind() == "enum_field" {
+		if child.Kind() == formatterNodeTypeEnumField {
 			value := strings.TrimSpace(ast.GetText(child, source))
 			// Remove trailing comma if present (it's handled separately)
 			value = strings.TrimSuffix(value, ",")
@@ -1035,13 +1043,15 @@ func (f *FrugalFormatter) getIndent(level int) string {
 }
 
 // nodeContainsComments checks if a node or its children contain comments
+//
+//nolint:unparam // source parameter maintained for API consistency
 func (f *FrugalFormatter) nodeContainsComments(node *tree_sitter.Node, source []byte) bool {
 	if node == nil {
 		return false
 	}
 
 	// Check current node
-	if node.Kind() == "comment" {
+	if node.Kind() == formatterNodeTypeComment {
 		return true
 	}
 
@@ -1058,6 +1068,7 @@ func (f *FrugalFormatter) nodeContainsComments(node *tree_sitter.Node, source []
 }
 
 // formatConservatively provides conservative formatting that preserves comments and spacing
+//
 //nolint:gocognit // Complex conservative formatting preserves existing structure
 func (f *FrugalFormatter) formatConservatively(node *tree_sitter.Node, source []byte, indentLevel int) string {
 	indent := f.getIndent(indentLevel)
