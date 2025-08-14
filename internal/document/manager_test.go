@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	testURI = "file:///test.frugal"
+	testURI        = "file:///test.frugal"
 	testUserStruct = `struct User {
     1: string name,
     2: i64 id

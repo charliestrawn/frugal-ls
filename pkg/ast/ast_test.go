@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	testUserName = "User"
+	testUserName         = "User"
 	testUserStructSimple = `struct User {
     1: i64 id
 }`

@@ -12,6 +12,10 @@ import (
 	"frugal-ls/pkg/ast"
 )
 
+const (
+	formatterNodeTypeHeader = "header"
+)
+
 // FrugalFormatter provides comprehensive AST-based formatting for Frugal files
 type FrugalFormatter struct {
 	indentSize    int
@@ -97,7 +101,7 @@ func (f *FrugalFormatter) formatNode(node *tree_sitter.Node, source []byte, inde
 		return f.formatGenericNode(node, source, indentLevel)
 	case "include":
 		return f.formatInclude(node, source)
-	case "header":
+	case formatterNodeTypeHeader:
 		// Handle the header wrapper for includes
 		childCount := node.ChildCount()
 		for i := uint(0); i < childCount; i++ {
@@ -130,6 +134,7 @@ func (f *FrugalFormatter) formatNode(node *tree_sitter.Node, source []byte, inde
 }
 
 // formatDocument formats the root document node
+//nolint:gocognit // Complex formatting logic is inherently complex
 func (f *FrugalFormatter) formatDocument(node *tree_sitter.Node, source []byte, indentLevel int) string {
 	var sections []string
 	var currentSection []string
@@ -208,7 +213,7 @@ func (f *FrugalFormatter) getActualDefinitionType(node *tree_sitter.Node) string
 				return childType
 			}
 		}
-	} else if node.Kind() == "header" {
+	} else if node.Kind() == formatterNodeTypeHeader {
 		// Look inside header for the actual type
 		childCount := node.ChildCount()
 		for i := uint(0); i < childCount; i++ {
@@ -263,7 +268,7 @@ func (f *FrugalFormatter) countRemainingDefinitions(parentNode *tree_sitter.Node
 // shouldAddSectionBreak determines if we should add a section break after this node type
 func (f *FrugalFormatter) shouldAddSectionBreak(nodeType string) bool {
 	switch nodeType {
-	case "namespace_declaration", "include", "header":
+	case "namespace_declaration", "include", formatterNodeTypeHeader:
 		return true
 	case "service_definition", "scope_definition":
 		return true
@@ -374,6 +379,7 @@ func (f *FrugalFormatter) formatComment(node *tree_sitter.Node, source []byte, i
 }
 
 // formatMultiLineComment formats multi-line comments with proper star alignment
+//nolint:gocognit // Complex comment formatting logic handles many edge cases
 func (f *FrugalFormatter) formatMultiLineComment(commentText, indent string) string {
 	lines := strings.Split(commentText, "\n")
 	if len(lines) <= 1 {
@@ -1052,6 +1058,7 @@ func (f *FrugalFormatter) nodeContainsComments(node *tree_sitter.Node, source []
 }
 
 // formatConservatively provides conservative formatting that preserves comments and spacing
+//nolint:gocognit // Complex conservative formatting preserves existing structure
 func (f *FrugalFormatter) formatConservatively(node *tree_sitter.Node, source []byte, indentLevel int) string {
 	indent := f.getIndent(indentLevel)
 	nodeText := ast.GetText(node, source)

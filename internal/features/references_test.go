@@ -11,6 +11,7 @@ import (
 	"frugal-ls/internal/parser"
 )
 
+//nolint:gocognit // Test functions are naturally complex
 func TestReferencesProvider(t *testing.T) {
 	provider := NewReferencesProvider()
 
@@ -213,6 +214,7 @@ struct UserRequest {
 	}
 }
 
+//nolint:gocognit // Test functions are naturally complex
 func TestGetSymbolAtPosition(t *testing.T) {
 	provider := NewReferencesProvider()
 

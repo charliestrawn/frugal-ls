@@ -13,16 +13,16 @@ import (
 )
 
 const (
-	nodeTypeConst           = "const"
-	nodeTypeService         = "service"
-	nodeTypeStruct          = "struct"
-	nodeTypeException       = "exception"
-	nodeTypeEnum            = "enum"
-	nodeTypeScope           = "scope"
-	nodeTypeEnumDefinition  = "enum_definition"
-	nodeTypeServiceDefinition = "service_definition"
+	nodeTypeConst               = "const"
+	nodeTypeService             = "service"
+	nodeTypeStruct              = "struct"
+	nodeTypeException           = "exception"
+	nodeTypeEnum                = "enum"
+	nodeTypeScope               = "scope"
+	nodeTypeEnumDefinition      = "enum_definition"
+	nodeTypeServiceDefinition   = "service_definition"
 	nodeTypeExceptionDefinition = "exception_definition"
-	nodeTypeTypedefDefinition = "typedef_definition"
+	nodeTypeTypedefDefinition   = "typedef_definition"
 )
 
 // DiagnosticsProvider provides comprehensive diagnostics for Frugal files

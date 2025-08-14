@@ -97,6 +97,7 @@ const (
 )
 
 // determineCompletionContext analyzes the content up to cursor to determine completion context
+//nolint:gocognit // Completion context analysis requires checking many patterns
 func (c *CompletionProvider) determineCompletionContext(contentUpToCursor string) CompletionContext {
 	lines := strings.Split(contentUpToCursor, "\n")
 	lastLine := ""

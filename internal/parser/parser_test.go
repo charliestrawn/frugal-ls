@@ -4,6 +4,7 @@ import (
 	"testing"
 )
 
+//nolint:gocognit // Test functions are naturally complex
 func TestScopeDeclarations(t *testing.T) {
 	tests := []struct {
 		name    string
