@@ -84,9 +84,9 @@ jobs:
         go-version: '1.23'
     
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v8
+      uses: golangci/golangci-lint-action@v6
       with:
-        version: latest
+        version: v1.60.3
         args: --timeout=5m
     
     - name: Check formatting
