@@ -265,7 +265,7 @@ func (r *RenameProvider) extractIdentifierInfo(node *tree_sitter.Node, source []
 			Range:   symbolRange,
 			Context: "definition",
 		}
-	case "field":
+	case nodeTypeField:
 		return &SymbolInfo{
 			Name:    name,
 			Kind:    "field",

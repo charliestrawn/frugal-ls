@@ -167,7 +167,7 @@ func (p *ReferencesProvider) findReferencesInDocument(doc *document.Document, sy
 
 // walkTreeForReferences recursively walks the syntax tree looking for identifier references
 func (p *ReferencesProvider) walkTreeForReferences(node *tree_sitter.Node, symbol string, content string, references *[]protocol.Range) {
-	if node.Kind() == "identifier" {
+	if node.Kind() == nodeTypeIdentifier {
 		nodeText := content[node.StartByte():node.EndByte()]
 		if nodeText == symbol {
 			// Found a reference
