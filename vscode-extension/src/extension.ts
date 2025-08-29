@@ -4,7 +4,6 @@ import {
 	LanguageClientOptions,
 	ServerOptions,
 	TransportKind,
-	ExecutableOptions,
 	Executable
 } from 'vscode-languageclient/node';
 
@@ -89,7 +88,7 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 }
 
-export function deactivate(): Thenable<void> | undefined {
+export function deactivate(): Promise<void> | undefined {
 	if (!client) {
 		return undefined;
 	}
