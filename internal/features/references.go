@@ -221,10 +221,10 @@ func (p *ReferencesProvider) getSymbolContext(node *tree_sitter.Node) string {
 		return "exception"
 	case diagnosticsNodeTypeScopeDefinition:
 		return "scope"
-	case "function_definition":
+	case nodeTypeFunctionDefinition:
 		return "function"
-	case "field":
-		return "field"
+	case nodeTypeField:
+		return nodeTypeField
 	case formatterNodeTypeEnumField:
 		return formatterNodeTypeEnumField
 	case "scope_operation":

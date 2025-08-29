@@ -258,7 +258,7 @@ func (r *RenameProvider) extractIdentifierInfo(node *tree_sitter.Node, source []
 			Range:   symbolRange,
 			Context: "definition",
 		}
-	case "function_definition":
+	case nodeTypeFunctionDefinition:
 		return &SymbolInfo{
 			Name:    name,
 			Kind:    "method",

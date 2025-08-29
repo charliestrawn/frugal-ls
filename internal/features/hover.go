@@ -78,7 +78,7 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 
 	// Handle different node types
 	switch nodeType {
-	case "identifier":
+	case nodeTypeIdentifier:
 		// Check if this identifier is in a special context (method, field, etc.)
 		if methodInfo := h.getMethodInfo(node, doc); methodInfo != "" {
 			content.WriteString(methodInfo)
@@ -256,7 +256,7 @@ func (h *HoverProvider) extractConstInfo(node *tree_sitter.Node, source []byte) 
 		switch child.Kind() {
 		case nodeTypeFieldType:
 			constType = ast.GetText(child, source)
-		case "identifier":
+		case nodeTypeIdentifier:
 			if constName == "" { // First identifier is the name
 				constName = ast.GetText(child, source)
 			}
@@ -278,7 +278,7 @@ func (h *HoverProvider) extractTypedefInfo(node *tree_sitter.Node, source []byte
 		switch child.Kind() {
 		case nodeTypeFieldType:
 			baseType = ast.GetText(child, source)
-		case "identifier":
+		case nodeTypeIdentifier:
 			aliasName = ast.GetText(child, source)
 		}
 	}
@@ -359,7 +359,7 @@ func (h *HoverProvider) getStructFields(node *tree_sitter.Node, source []byte) s
 	childCount := structBody.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := structBody.Child(i)
-		if child.Kind() == "field" || strings.Contains(child.Kind(), "field") {
+		if child.Kind() == nodeTypeField || strings.Contains(child.Kind(), "field") {
 			fieldText := ast.GetText(child, source)
 			content.WriteString(fmt.Sprintf("- `%s`\n", strings.TrimSpace(fieldText)))
 			fieldCount++
@@ -486,7 +486,7 @@ func (h *HoverProvider) getFieldInfo(node *tree_sitter.Node, doc *document.Docum
 		nodeType := current.Kind()
 
 		// Check if we're in a field declaration
-		if nodeType == "field_declaration" || nodeType == "field" {
+		if nodeType == "field_declaration" || nodeType == nodeTypeField {
 			return h.formatFieldDeclaration(current, doc.Content)
 		}
 

@@ -132,7 +132,7 @@ func (p *DocumentHighlightProvider) isDeclaration(node *tree_sitter.Node) bool {
 		childCount := parent.ChildCount()
 		for i := uint(0); i < childCount; i++ {
 			child := parent.Child(i)
-			if child.Kind() == "identifier" && child == node {
+			if child.Kind() == nodeTypeIdentifier && child == node {
 				return i == 1 // Usually keyword is at 0, name at 1
 			}
 		}

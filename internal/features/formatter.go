@@ -386,6 +386,7 @@ func (f *FrugalFormatter) formatComment(node *tree_sitter.Node, source []byte, i
 }
 
 // formatMultiLineComment formats multi-line comments with proper star alignment
+// TODO: Refactor to reduce cyclomatic complexity (currently 27, should be <15)
 //
 //nolint:gocognit // Complex comment formatting logic handles many edge cases
 func (f *FrugalFormatter) formatMultiLineComment(commentText, indent string) string {

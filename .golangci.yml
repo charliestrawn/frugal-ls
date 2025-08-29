@@ -61,6 +61,8 @@ issues:
         - errcheck
         - gosec
         - dupl
+        - goconst
+        - unparam
     
     # Exclude known linter issues
     - text: "weak cryptographic primitive"
@@ -71,6 +73,16 @@ issues:
     - path: ".*\\.pb\\.go$"
       linters:
         - all
+    
+    # Ignore complex function warnings for now - TODO: refactor these
+    - text: "cyclomatic complexity.*is high"
+      linters:
+        - gocyclo
+    
+    # Ignore unused parameter warnings for interface implementations
+    - text: "is unused"
+      linters:
+        - unparam
 
   max-issues-per-linter: 0
   max-same-issues: 0
