@@ -693,7 +693,7 @@ func (f *FrugalFormatter) formatTypedef(node *tree_sitter.Node, source []byte, i
 		switch child.Kind() {
 		case nodeTypeFieldType:
 			baseType = strings.TrimSpace(ast.GetText(child, source))
-		case "identifier":
+		case nodeTypeIdentifier:
 			aliasName = strings.TrimSpace(ast.GetText(child, source))
 		}
 	}

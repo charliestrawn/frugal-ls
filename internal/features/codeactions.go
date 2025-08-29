@@ -20,6 +20,8 @@ const (
 	nodeTypeIdentifier         = "identifier"
 	nodeTypeThrows             = "throws"
 	nodeTypeBaseType           = "base_type"
+	nodeTypeTypeIdentifier     = "type_identifier"
+	nodeTypeParameter          = "parameter"
 	nodeTypeField              = "field"
 	nodeTypeFieldID            = "field_id"
 )

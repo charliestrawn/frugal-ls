@@ -92,7 +92,7 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 			found = true
 		}
 
-	case "service_definition":
+	case diagnosticsNodeTypeServiceDefinition:
 		if serviceName := h.extractServiceName(node, doc.Content); serviceName != "" {
 			content.WriteString(fmt.Sprintf("**Service**: `%s`\n\n", serviceName))
 			content.WriteString("Defines a service with RPC methods.\n\n")
@@ -100,7 +100,7 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 			found = true
 		}
 
-	case "scope_definition":
+	case diagnosticsNodeTypeScopeDefinition:
 		if scopeName := h.extractScopeName(node, doc.Content); scopeName != "" {
 			content.WriteString(fmt.Sprintf("**Scope**: `%s`\n\n", scopeName))
 			content.WriteString("Defines a pub/sub scope for event messaging.\n\n")
@@ -108,7 +108,7 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 			found = true
 		}
 
-	case "struct_definition":
+	case nodeTypeStructDefinition:
 		if structName := h.extractStructName(node, doc.Content); structName != "" {
 			content.WriteString(fmt.Sprintf("**Struct**: `%s`\n\n", structName))
 			content.WriteString("Data structure definition.\n\n")
@@ -116,7 +116,7 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 			found = true
 		}
 
-	case "enum_definition":
+	case diagnosticsNodeTypeEnumDefinition:
 		if enumName := h.extractEnumName(node, doc.Content); enumName != "" {
 			content.WriteString(fmt.Sprintf("**Enum**: `%s`\n\n", enumName))
 			content.WriteString("Enumeration type definition.\n\n")
@@ -124,13 +124,13 @@ func (h *HoverProvider) getHoverInfo(node *tree_sitter.Node, doc *document.Docum
 			found = true
 		}
 
-	case "const_definition":
+	case diagnosticsNodeTypeConstDefinition:
 		if constInfo := h.extractConstInfo(node, doc.Content); constInfo != "" {
 			content.WriteString(fmt.Sprintf("**Constant**: %s\n\n", constInfo))
 			found = true
 		}
 
-	case "typedef_definition":
+	case diagnosticsNodeTypeTypedefDefinition:
 		if typedefInfo := h.extractTypedefInfo(node, doc.Content); typedefInfo != "" {
 			content.WriteString(fmt.Sprintf("**Type Alias**: %s\n\n", typedefInfo))
 			found = true
@@ -254,7 +254,7 @@ func (h *HoverProvider) extractConstInfo(node *tree_sitter.Node, source []byte) 
 	for i := uint(0); i < childCount; i++ {
 		child := node.Child(i)
 		switch child.Kind() {
-		case "field_type":
+		case nodeTypeFieldType:
 			constType = ast.GetText(child, source)
 		case "identifier":
 			if constName == "" { // First identifier is the name
@@ -276,7 +276,7 @@ func (h *HoverProvider) extractTypedefInfo(node *tree_sitter.Node, source []byte
 	for i := uint(0); i < childCount; i++ {
 		child := node.Child(i)
 		switch child.Kind() {
-		case "field_type":
+		case nodeTypeFieldType:
 			baseType = ast.GetText(child, source)
 		case "identifier":
 			aliasName = ast.GetText(child, source)
@@ -460,7 +460,7 @@ func (h *HoverProvider) getMethodInfo(node *tree_sitter.Node, doc *document.Docu
 		nodeType := current.Kind()
 
 		// Check if we're in a function/method declaration
-		if nodeType == "function_declaration" || nodeType == "method_declaration" || nodeType == "function_definition" {
+		if nodeType == "function_declaration" || nodeType == "method_declaration" || nodeType == nodeTypeFunctionDefinition {
 			return h.formatMethodDeclaration(current, doc.Content)
 		}
 

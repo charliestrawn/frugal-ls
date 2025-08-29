@@ -484,6 +484,7 @@ func (si *SymbolIndex) removeSymbolFromSlice(slice []IndexedSymbol, target Index
 }
 
 // findMatches finds symbols matching the query using multiple strategies
+//
 //nolint:gocognit // Symbol matching requires complex logic for fuzzy search and ranking
 func (si *SymbolIndex) findMatches(query string) []IndexedSymbol {
 	lowerQuery := strings.ToLower(query)

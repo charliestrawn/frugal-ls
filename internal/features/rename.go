@@ -279,12 +279,12 @@ func (r *RenameProvider) extractIdentifierInfo(node *tree_sitter.Node, source []
 			Range:   symbolRange,
 			Context: "enum_field",
 		}
-	case "parameter":
+	case nodeTypeParameter:
 		return &SymbolInfo{
 			Name:    name,
-			Kind:    "parameter",
+			Kind:    nodeTypeParameter,
 			Range:   symbolRange,
-			Context: "parameter",
+			Context: nodeTypeParameter,
 		}
 	default:
 		// Check if it's a type reference

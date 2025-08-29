@@ -152,7 +152,7 @@ func (p *ReferencesProvider) findIdentifierNode(node *tree_sitter.Node) *tree_si
 // isSymbolNode checks if a node represents a symbol that can be referenced
 func (p *ReferencesProvider) isSymbolNode(node *tree_sitter.Node) bool {
 	kind := node.Kind()
-	return kind == "identifier" || kind == "base_type" || kind == "type_identifier"
+	return kind == nodeTypeIdentifier || kind == nodeTypeBaseType || kind == nodeTypeTypeIdentifier
 }
 
 // findReferencesInDocument finds all references to the given symbol in a document
@@ -211,15 +211,15 @@ func (p *ReferencesProvider) getSymbolContext(node *tree_sitter.Node) string {
 	}
 
 	switch parent.Kind() {
-	case "struct_definition":
+	case nodeTypeStructDefinition:
 		return "struct"
-	case "service_definition":
+	case diagnosticsNodeTypeServiceDefinition:
 		return "service"
-	case "enum_definition":
+	case diagnosticsNodeTypeEnumDefinition:
 		return "enum"
-	case "exception_definition":
+	case diagnosticsNodeTypeExceptionDefinition:
 		return "exception"
-	case "scope_definition":
+	case diagnosticsNodeTypeScopeDefinition:
 		return "scope"
 	case "function_definition":
 		return "function"

@@ -102,7 +102,7 @@ func (p *DocumentHighlightProvider) getHighlightKind(doc *document.Document, r p
 		}
 		kind := protocol.DocumentHighlightKindRead
 		return &kind
-	case "field", formatterNodeTypeEnumField:
+	case nodeTypeField, formatterNodeTypeEnumField:
 		// Field definitions and references
 		if p.isDeclaration(node) {
 			kind := protocol.DocumentHighlightKindWrite
@@ -136,7 +136,7 @@ func (p *DocumentHighlightProvider) isDeclaration(node *tree_sitter.Node) bool {
 				return i == 1 // Usually keyword is at 0, name at 1
 			}
 		}
-	case "field", formatterNodeTypeEnumField:
+	case nodeTypeField, formatterNodeTypeEnumField:
 		// Field declarations
 		return true
 	}
