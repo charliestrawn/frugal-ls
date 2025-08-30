@@ -353,12 +353,8 @@ func (r *RenameProvider) isRenameable(symbol *SymbolInfo) bool {
 		"required": true, "optional": true, "prefix": true,
 	}
 
-	if keywords[symbol.Name] {
-		return false
-	}
-
-	// All user-defined symbols can be renamed
-	return true
+	// All user-defined symbols can be renamed (but not keywords)
+	return !keywords[symbol.Name]
 }
 
 // validateNewName checks if the new name is valid
