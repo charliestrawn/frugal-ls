@@ -316,7 +316,7 @@ func (d *DocumentSymbolProvider) isEventNode(node *tree_sitter.Node) bool {
 func (d *DocumentSymbolProvider) isFieldNode(node *tree_sitter.Node) bool {
 	kind := node.Kind()
 	return kind == "field" || kind == "struct_field" ||
-		(kind == "identifier" && d.looksLikeField(node))
+		(kind == nodeTypeIdentifier && d.looksLikeField(node))
 }
 
 func (d *DocumentSymbolProvider) isEnumValueNode(node *tree_sitter.Node) bool {

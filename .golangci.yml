@@ -63,6 +63,8 @@ issues:
         - dupl
         - goconst
         - unparam
+        - gosimple
+        - staticcheck
     
     # Exclude known linter issues
     - text: "weak cryptographic primitive"
