@@ -305,12 +305,12 @@ func (d *DocumentSymbolProvider) extractEnumValues(enumNode *tree_sitter.Node, d
 func (d *DocumentSymbolProvider) isMethodNode(node *tree_sitter.Node) bool {
 	kind := node.Kind()
 	return kind == "method" || kind == "function" ||
-		(kind == "identifier" && d.looksLikeMethod(node))
+		(kind == nodeTypeIdentifier && d.looksLikeMethod(node))
 }
 
 func (d *DocumentSymbolProvider) isEventNode(node *tree_sitter.Node) bool {
 	kind := node.Kind()
-	return kind == "event" || kind == "identifier"
+	return kind == "event" || kind == nodeTypeIdentifier
 }
 
 func (d *DocumentSymbolProvider) isFieldNode(node *tree_sitter.Node) bool {
