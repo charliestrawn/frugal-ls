@@ -175,7 +175,7 @@ func (s *SemanticTokensProvider) walkNodeForTokens(node *tree_sitter.Node, sourc
 			Modifiers: 0,
 		})
 
-	case "identifier":
+	case nodeTypeIdentifier:
 		// Context-dependent identifier classification
 		tokenType, modifiers := s.classifyIdentifier(node, source)
 		*tokens = append(*tokens, Token{

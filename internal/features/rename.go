@@ -177,7 +177,7 @@ func (r *RenameProvider) extractSymbolInfo(node *tree_sitter.Node, source []byte
 
 	// Handle different node types that can be renamed
 	switch nodeType {
-	case "identifier":
+	case nodeTypeIdentifier:
 		return r.extractIdentifierInfo(node, source)
 	case "type_identifier":
 		return r.extractTypeInfo(node, source)

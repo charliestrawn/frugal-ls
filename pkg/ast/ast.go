@@ -97,7 +97,7 @@ func ExtractSymbols(root *tree_sitter.Node, source []byte) []Symbol {
 	return symbols
 }
 
-//nolint:gocyclo // AST traversal requires many case statements for different node types
+// TODO: Refactor to reduce cyclomatic complexity
 func extractSymbolsRecursive(node *tree_sitter.Node, source []byte, symbols *[]Symbol) {
 	if node == nil {
 		return

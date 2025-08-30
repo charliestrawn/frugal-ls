@@ -230,7 +230,7 @@ func (p *ReferencesProvider) getSymbolContext(node *tree_sitter.Node) string {
 	case "scope_operation":
 		return "scope_operation"
 	default:
-		return "identifier"
+		return nodeTypeIdentifier
 	}
 }
 

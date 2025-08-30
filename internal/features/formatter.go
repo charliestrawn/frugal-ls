@@ -98,11 +98,10 @@ func (f *FrugalFormatter) formatNode(node *tree_sitter.Node, source []byte, inde
 	case formatterNodeTypeComment:
 		return f.formatComment(node, source, indentLevel)
 	case "definition":
-		// Handle the intermediate definition node
-		childCount := node.ChildCount()
-		for i := uint(0); i < childCount; i++ {
-			child := node.Child(i)
-			return f.formatNode(child, source, indentLevel) // Format the first child
+		// Handle the intermediate definition node - format the first child
+		if node.ChildCount() > 0 {
+			child := node.Child(0)
+			return f.formatNode(child, source, indentLevel)
 		}
 		return f.formatGenericNode(node, source, indentLevel)
 	case formatterNodeTypeInclude:
@@ -1044,8 +1043,6 @@ func (f *FrugalFormatter) getIndent(level int) string {
 }
 
 // nodeContainsComments checks if a node or its children contain comments
-//
-//nolint:unparam // source parameter maintained for API consistency
 func (f *FrugalFormatter) nodeContainsComments(node *tree_sitter.Node, source []byte) bool {
 	if node == nil {
 		return false
