@@ -328,6 +328,62 @@ service UserService {
 	}
 }
 
+func TestDiagnosticsQualifiedTypes(t *testing.T) {
+	provider := NewDiagnosticsProvider()
+
+	// Test that qualified types (from includes) don't trigger unknown type errors
+	content := `include "common.frugal"
+
+service TestService {
+    void updateAddress(1: common.Address addr),
+    common.ContactInfo getContact(1: i64 userId)
+}
+
+struct Response {
+    1: common.Priority priority
+}`
+
+	doc := createTestDocumentForDiagnostics(t, "file:///test.frugal", content)
+	defer doc.ParseResult.Close()
+
+	diagnostics := provider.ProvideDiagnostics(doc)
+
+	// Should NOT have unknown type errors for qualified types
+	for _, diagnostic := range diagnostics {
+		if strings.Contains(diagnostic.Message, "Unknown type 'common.Address'") ||
+			strings.Contains(diagnostic.Message, "Unknown type 'common.ContactInfo'") ||
+			strings.Contains(diagnostic.Message, "Unknown type 'common.Priority'") {
+			t.Errorf("Qualified types should not trigger unknown type errors: %s", diagnostic.Message)
+		}
+	}
+}
+
+func TestDiagnosticsQualifiedTypesWithRelativeIncludes(t *testing.T) {
+	provider := NewDiagnosticsProvider()
+
+	// Test that qualified types work with relative include paths
+	content := `include "../shared/types.frugal"
+include "./models/user.frugal"
+
+service TestService {
+    types.CommonStruct getData(1: user.UserId id),
+    void saveData(1: types.Result result)
+}`
+
+	doc := createTestDocumentForDiagnostics(t, "file:///workspace/service/test.frugal", content)
+	defer doc.ParseResult.Close()
+
+	diagnostics := provider.ProvideDiagnostics(doc)
+
+	// Should NOT have unknown type errors for qualified types from relative includes
+	for _, diagnostic := range diagnostics {
+		if strings.Contains(diagnostic.Message, "Unknown type 'types.") ||
+			strings.Contains(diagnostic.Message, "Unknown type 'user.") {
+			t.Errorf("Qualified types from relative includes should not trigger unknown type errors: %s", diagnostic.Message)
+		}
+	}
+}
+
 func TestDiagnosticsDuplicateThrowsFieldIds(t *testing.T) {
 	provider := NewDiagnosticsProvider()
 

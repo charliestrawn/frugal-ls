@@ -490,6 +490,13 @@ func (d *DiagnosticsProvider) validateTypeReference(doc *document.Document, type
 		return // Valid type or couldn't extract name
 	}
 
+	// Check if it's a qualified type (e.g., common.Address)
+	// Qualified types reference types from included files, so we skip validation
+	// since we don't have the full include resolution context here
+	if strings.Contains(typeName, ".") {
+		return // Skip validation for qualified types
+	}
+
 	// Check if it might be a container type
 	if d.isContainerType(typeNode) {
 		return // Container types have their own validation
@@ -506,7 +513,16 @@ func (d *DiagnosticsProvider) validateTypeReference(doc *document.Document, type
 
 // extractTypeName extracts the main type name from a field_type node
 func (d *DiagnosticsProvider) extractTypeName(typeNode *tree_sitter.Node, content []byte) string {
-	// Look for identifier or base_type
+	// Get the full text of the type node first to handle qualified types
+	fullTypeText := ast.GetText(typeNode, content)
+
+	// If it contains a dot, it's a qualified type (e.g., common.Address)
+	// Extract just the module prefix and type name
+	if strings.Contains(fullTypeText, ".") {
+		return fullTypeText // Return the full qualified name
+	}
+
+	// Look for identifier or base_type for simple types
 	if identifier := ast.FindNodeByType(typeNode, "identifier"); identifier != nil {
 		return ast.GetText(identifier, content)
 	}
