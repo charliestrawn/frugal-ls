@@ -49,7 +49,7 @@ jobs:
         GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/frugal-ls-darwin-amd64 ./cmd/frugal-ls
     
     - name: Setup Node.js for VS Code extension
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: '20'
         cache: 'npm'
