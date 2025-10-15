@@ -26,16 +26,27 @@ jobs:
     - name: Run tests
       run: go test ./...
     
+    - name: Install cross-compilation dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu
+
     - name: Build binaries
       run: |
         mkdir -p dist
-        
+
         # Build for multiple platforms with CGO enabled
         # Linux AMD64 (native)
         GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -ldflags="-s -w" -o dist/frugal-ls-linux-amd64 ./cmd/frugal-ls
-        
-        # Note: ARM64 and Darwin builds require cross-compilation toolchains
-        # For releases, we'll add more platforms as needed
+
+        # Linux ARM64 (cross-compile)
+        GOOS=linux GOARCH=arm64 CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc go build -ldflags="-s -w" -o dist/frugal-ls-linux-arm64 ./cmd/frugal-ls
+
+        # macOS ARM64 (Apple Silicon) - CGO disabled for cross-platform compatibility
+        GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/frugal-ls-darwin-arm64 ./cmd/frugal-ls
+
+        # macOS AMD64 (Intel) - CGO disabled for cross-platform compatibility
+        GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/frugal-ls-darwin-amd64 ./cmd/frugal-ls
     
     - name: Setup Node.js for VS Code extension
       uses: actions/setup-node@v4
