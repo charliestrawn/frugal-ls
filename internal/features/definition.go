@@ -232,10 +232,7 @@ func (d *DefinitionProvider) filterDocumentsByNamespace(namespace string, allDoc
 	for uri, doc := range allDocuments {
 		// Extract the filename stem from the URI
 		// e.g., "file:///path/to/common.frugal" -> "common"
-		path := uri
-		if strings.HasPrefix(path, "file://") {
-			path = path[7:] // Remove "file://" prefix
-		}
+		path := strings.TrimPrefix(uri, "file://")
 
 		filename := filepath.Base(path)
 		stem := strings.TrimSuffix(filename, filepath.Ext(filename))
