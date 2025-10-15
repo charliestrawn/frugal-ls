@@ -97,8 +97,29 @@ func (p *ReferencesProvider) getSymbolAtPosition(doc *document.Document, positio
 		return "", nil
 	}
 
+	// Check if this is part of a qualified type (e.g., common.Address)
+	// We'll keep the full qualified name for now, and filter documents later
+	parent := identifierNode.Parent()
+	fullQualifiedName := ""
+	if parent != nil && parent.Kind() == nodeTypeFieldType {
+		// Get the full text to capture qualified names
+		fullText := string(doc.Content[parent.StartByte():parent.EndByte()])
+		if strings.Contains(fullText, ".") {
+			fullQualifiedName = fullText
+		}
+	}
+
 	// Extract the symbol text
 	symbol := string(doc.Content[identifierNode.StartByte():identifierNode.EndByte()])
+
+	// If we have a qualified name, store it for filtering later
+	// For now, return the unqualified part and let the caller handle filtering
+	if fullQualifiedName != "" {
+		parts := strings.Split(fullQualifiedName, ".")
+		if len(parts) == 2 {
+			symbol = parts[1] // Return unqualified name
+		}
+	}
 
 	// Convert node range back to LSP range
 	symbolRange := p.nodeToRange(identifierNode, string(doc.Content))

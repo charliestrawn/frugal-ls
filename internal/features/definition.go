@@ -1,7 +1,7 @@
 package features
 
 import (
-	"fmt"
+	"path/filepath"
 	"strings"
 
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -48,31 +48,72 @@ func (d *DefinitionProvider) ProvideDefinition(doc *document.Document, position 
 		return nil, nil
 	}
 
-	// Find definitions in the current document first
-	locations := d.findDefinitionsInDocument(symbolName, doc)
+	// If it's a qualified name (e.g., common.Address), resolve it properly
+	var unqualifiedName string
+	var targetDocuments map[string]*document.Document
 
-	// If not found in current document, search other documents
-	if len(locations) == 0 {
-		for docURI, otherDoc := range allDocuments {
-			if docURI == doc.URI || !otherDoc.IsValidFrugalFile() {
-				continue
-			}
+	if strings.Contains(symbolName, ".") {
+		parts := strings.Split(symbolName, ".")
+		if len(parts) == 2 {
+			namespace := parts[0]      // e.g., "common"
+			unqualifiedName = parts[1] // e.g., "Address"
 
-			docLocations := d.findDefinitionsInDocument(symbolName, otherDoc)
-			locations = append(locations, docLocations...)
+			// Find documents that match this namespace (by filename stem)
+			targetDocuments = d.filterDocumentsByNamespace(namespace, allDocuments)
+		}
+	} else {
+		// Unqualified name - search everywhere
+		unqualifiedName = symbolName
+		targetDocuments = allDocuments
+	}
+
+	// Find definition in the current document first (if it's in our target set)
+	if _, inTarget := targetDocuments[doc.URI]; inTarget {
+		location := d.findDefinitionInDocument(unqualifiedName, doc)
+		if location != nil {
+			return []protocol.Location{*location}, nil
 		}
 	}
 
-	return locations, nil
+	// Search other target documents
+	for docURI, otherDoc := range targetDocuments {
+		if docURI == doc.URI || !otherDoc.IsValidFrugalFile() {
+			continue
+		}
+
+		location := d.findDefinitionInDocument(unqualifiedName, otherDoc)
+		if location != nil {
+			return []protocol.Location{*location}, nil
+		}
+	}
+
+	return nil, nil
 }
 
 // extractSymbolName extracts the symbol name from a node
 func (d *DefinitionProvider) extractSymbolName(node *tree_sitter.Node, source []byte) string {
 	nodeType := node.Kind()
 
-	// For identifiers, use the text directly
+	// For identifiers, check if parent is a qualified type (field_type)
 	if nodeType == nodeTypeIdentifier {
+		parent := node.Parent()
+		if parent != nil && parent.Kind() == nodeTypeFieldType {
+			// Get the full text of the parent to capture qualified names (e.g., common.Address)
+			fullText := ast.GetText(parent, source)
+			if strings.Contains(fullText, ".") {
+				return fullText // Return qualified name
+			}
+		}
 		return ast.GetText(node, source)
+	}
+
+	// For field_type nodes, get the full text to handle qualified names
+	if nodeType == nodeTypeFieldType {
+		fullText := ast.GetText(node, source)
+		if strings.Contains(fullText, ".") {
+			return fullText // Return qualified name
+		}
+		// Fall through to find identifier
 	}
 
 	// For other node types, try to find an identifier child
@@ -84,15 +125,13 @@ func (d *DefinitionProvider) extractSymbolName(node *tree_sitter.Node, source []
 	return ""
 }
 
-// findDefinitionsInDocument finds all definitions of a symbol in a document
-func (d *DefinitionProvider) findDefinitionsInDocument(symbolName string, doc *document.Document) []protocol.Location {
-	var locations []protocol.Location
-
+// findDefinitionInDocument finds the first definition of a symbol in a document
+func (d *DefinitionProvider) findDefinitionInDocument(symbolName string, doc *document.Document) *protocol.Location {
 	// Search through document symbols first - these are more accurate
 	symbols := doc.GetSymbols()
 	for _, symbol := range symbols {
 		if symbol.Name == symbolName {
-			location := protocol.Location{
+			return &protocol.Location{
 				URI: doc.URI,
 				Range: protocol.Range{
 					Start: protocol.Position{
@@ -105,25 +144,21 @@ func (d *DefinitionProvider) findDefinitionsInDocument(symbolName string, doc *d
 					},
 				},
 			}
-			locations = append(locations, location)
 		}
 	}
 
 	// If no symbols found, fall back to AST search (less accurate but more comprehensive)
-	if len(locations) == 0 && doc.ParseResult != nil && doc.ParseResult.GetRootNode() != nil {
-		locations = d.searchASTForDefinitions(symbolName, doc.ParseResult.GetRootNode(), doc)
+	if doc.ParseResult != nil && doc.ParseResult.GetRootNode() != nil {
+		return d.searchASTForDefinition(symbolName, doc.ParseResult.GetRootNode(), doc)
 	}
 
-	// Deduplicate any remaining duplicates
-	return d.deduplicateLocations(locations)
+	return nil
 }
 
-// searchASTForDefinitions searches the AST for symbol definitions
-func (d *DefinitionProvider) searchASTForDefinitions(symbolName string, node *tree_sitter.Node, doc *document.Document) []protocol.Location {
-	var locations []protocol.Location
-
+// searchASTForDefinition searches the AST for the first symbol definition
+func (d *DefinitionProvider) searchASTForDefinition(symbolName string, node *tree_sitter.Node, doc *document.Document) *protocol.Location {
 	if node == nil {
-		return locations
+		return nil
 	}
 
 	// Check if this node defines the symbol
@@ -131,7 +166,7 @@ func (d *DefinitionProvider) searchASTForDefinitions(symbolName string, node *tr
 		startPos := node.StartPosition()
 		endPos := node.EndPosition()
 
-		location := protocol.Location{
+		return &protocol.Location{
 			URI: doc.URI,
 			Range: protocol.Range{
 				Start: protocol.Position{
@@ -144,18 +179,18 @@ func (d *DefinitionProvider) searchASTForDefinitions(symbolName string, node *tr
 				},
 			},
 		}
-		locations = append(locations, location)
 	}
 
 	// Recursively search child nodes
 	childCount := node.ChildCount()
 	for i := uint(0); i < childCount; i++ {
 		child := node.Child(i)
-		childLocations := d.searchASTForDefinitions(symbolName, child, doc)
-		locations = append(locations, childLocations...)
+		if location := d.searchASTForDefinition(symbolName, child, doc); location != nil {
+			return location
+		}
 	}
 
-	return locations
+	return nil
 }
 
 // isDefinitionNode checks if a node defines a particular symbol
@@ -190,164 +225,27 @@ func (d *DefinitionProvider) isDefinitionNode(node *tree_sitter.Node, symbolName
 	return definedName == symbolName
 }
 
-// ProvideReferences finds all references to a symbol (for future implementation)
-func (d *DefinitionProvider) ProvideReferences(doc *document.Document, position protocol.Position, includeDeclaration bool, allDocuments map[string]*document.Document) ([]protocol.Location, error) {
-	if doc.ParseResult == nil || doc.ParseResult.GetRootNode() == nil {
-		return nil, nil
-	}
+// filterDocumentsByNamespace filters documents to those matching a namespace (filename stem)
+func (d *DefinitionProvider) filterDocumentsByNamespace(namespace string, allDocuments map[string]*document.Document) map[string]*document.Document {
+	filtered := make(map[string]*document.Document)
 
-	// Find the node at the position
-	node := FindNodeAtPosition(doc.ParseResult.GetRootNode(), doc.Content, uint(position.Line), uint(position.Character))
-	if node == nil {
-		return nil, nil
-	}
-
-	// Get the symbol name from the node
-	symbolName := d.extractSymbolName(node, doc.Content)
-	if symbolName == "" {
-		return nil, nil
-	}
-
-	var locations []protocol.Location
-
-	// Search all documents for references
-	for _, searchDoc := range allDocuments {
-		if !searchDoc.IsValidFrugalFile() {
-			continue
+	for uri, doc := range allDocuments {
+		// Extract the filename stem from the URI
+		// e.g., "file:///path/to/common.frugal" -> "common"
+		path := uri
+		if strings.HasPrefix(path, "file://") {
+			path = path[7:] // Remove "file://" prefix
 		}
 
-		docLocations := d.findReferencesInDocument(symbolName, searchDoc, includeDeclaration)
-		locations = append(locations, docLocations...)
-	}
+		filename := filepath.Base(path)
+		stem := strings.TrimSuffix(filename, filepath.Ext(filename))
 
-	// Also include the current document if not already included
-	currentLocations := d.findReferencesInDocument(symbolName, doc, includeDeclaration)
-	locations = append(locations, currentLocations...)
-
-	return d.deduplicateLocations(locations), nil
-}
-
-// findReferencesInDocument finds all references to a symbol in a document
-func (d *DefinitionProvider) findReferencesInDocument(symbolName string, doc *document.Document, includeDeclaration bool) []protocol.Location {
-	var locations []protocol.Location
-
-	if doc.ParseResult == nil || doc.ParseResult.GetRootNode() == nil {
-		return locations
-	}
-
-	// Search the entire AST for identifier nodes matching the symbol name
-	referenceLocs := d.searchASTForReferences(symbolName, doc.ParseResult.GetRootNode(), doc, includeDeclaration)
-	locations = append(locations, referenceLocs...)
-
-	return locations
-}
-
-// searchASTForReferences searches the AST for symbol references
-func (d *DefinitionProvider) searchASTForReferences(symbolName string, node *tree_sitter.Node, doc *document.Document, includeDeclaration bool) []protocol.Location {
-	var locations []protocol.Location
-
-	if node == nil {
-		return locations
-	}
-
-	nodeType := node.Kind()
-	nodeText := ast.GetText(node, doc.Content)
-
-	// Check if this is a reference to the symbol
-	if nodeType == nodeTypeIdentifier && nodeText == symbolName {
-		// Determine if this is a declaration or reference
-		isDeclaration := d.isInDeclarationContext(node, doc.Content)
-
-		if includeDeclaration || !isDeclaration {
-			startPos := node.StartPosition()
-			endPos := node.EndPosition()
-
-			location := protocol.Location{
-				URI: doc.URI,
-				Range: protocol.Range{
-					Start: protocol.Position{
-						Line:      uint32(startPos.Row),
-						Character: uint32(startPos.Column),
-					},
-					End: protocol.Position{
-						Line:      uint32(endPos.Row),
-						Character: uint32(endPos.Column),
-					},
-				},
-			}
-			locations = append(locations, location)
+		// Match the namespace to the filename stem
+		if stem == namespace {
+			filtered[uri] = doc
 		}
 	}
 
-	// Recursively search child nodes
-	childCount := node.ChildCount()
-	for i := uint(0); i < childCount; i++ {
-		child := node.Child(i)
-		childLocations := d.searchASTForReferences(symbolName, child, doc, includeDeclaration)
-		locations = append(locations, childLocations...)
-	}
-
-	return locations
+	return filtered
 }
 
-// isInDeclarationContext determines if an identifier node is in a declaration context
-func (d *DefinitionProvider) isInDeclarationContext(node *tree_sitter.Node, _ []byte) bool {
-	// Walk up the parent chain to find declaration contexts
-	current := node
-	for current != nil {
-		parent := current.Parent()
-		if parent == nil {
-			break
-		}
-
-		parentType := parent.Kind()
-		declarationTypes := map[string]bool{
-			"service_definition":   true,
-			"scope_definition":     true,
-			"struct_definition":    true,
-			"enum_definition":      true,
-			"const_definition":     true,
-			"typedef_definition":   true,
-			"exception_definition": true,
-		}
-
-		if declarationTypes[parentType] {
-			// Check if this identifier is the name being declared
-			// (usually the first identifier in the definition)
-			nameNode := ast.FindNodeByType(parent, "identifier")
-			if nameNode == node {
-				return true
-			}
-		}
-
-		current = parent
-	}
-
-	return false
-}
-
-// deduplicateLocations removes duplicate locations from the list
-func (d *DefinitionProvider) deduplicateLocations(locations []protocol.Location) []protocol.Location {
-	seen := make(map[string]bool)
-	var result []protocol.Location
-
-	for _, loc := range locations {
-		key := d.locationKey(loc)
-		if !seen[key] {
-			seen[key] = true
-			result = append(result, loc)
-		}
-	}
-
-	return result
-}
-
-// locationKey creates a unique key for a location
-func (d *DefinitionProvider) locationKey(loc protocol.Location) string {
-	return fmt.Sprintf("%s:%d:%d:%d:%d",
-		loc.URI,
-		loc.Range.Start.Line,
-		loc.Range.Start.Character,
-		loc.Range.End.Line,
-		loc.Range.End.Character)
-}
