@@ -34,13 +34,32 @@ A comprehensive Language Server Protocol implementation for Frugal IDL files, pr
 
 Download the latest release from [GitHub Releases](https://github.com/charliestrawn/frugal-ls/releases):
 
+**Linux AMD64:**
 ```bash
-# Download the binary (Linux AMD64)
 wget https://github.com/charliestrawn/frugal-ls/releases/download/v0.1.0/frugal-ls-linux-amd64
-
-# Make it executable and install
 chmod +x frugal-ls-linux-amd64
 sudo mv frugal-ls-linux-amd64 /usr/local/bin/frugal-ls
+```
+
+**Linux ARM64:**
+```bash
+wget https://github.com/charliestrawn/frugal-ls/releases/download/v0.1.0/frugal-ls-linux-arm64
+chmod +x frugal-ls-linux-arm64
+sudo mv frugal-ls-linux-arm64 /usr/local/bin/frugal-ls
+```
+
+**macOS ARM64 (Apple Silicon):**
+```bash
+wget https://github.com/charliestrawn/frugal-ls/releases/download/v0.1.0/frugal-ls-darwin-arm64
+chmod +x frugal-ls-darwin-arm64
+sudo mv frugal-ls-darwin-arm64 /usr/local/bin/frugal-ls
+```
+
+**macOS AMD64 (Intel):**
+```bash
+wget https://github.com/charliestrawn/frugal-ls/releases/download/v0.1.0/frugal-ls-darwin-amd64
+chmod +x frugal-ls-darwin-amd64
+sudo mv frugal-ls-darwin-amd64 /usr/local/bin/frugal-ls
 ```
 
 ### Option 2: Build from Source
