@@ -145,7 +145,7 @@ jobs:
         vsce package --no-dependencies
     
     - name: Upload extension artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: vscode-extension
         path: vscode-extension/*.vsix
@@ -202,7 +202,7 @@ jobs:
         go build -v -ldflags="-s -w" -o ${{ matrix.artifact_name }} ./cmd/frugal-ls
     
     - name: Upload binary artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ matrix.artifact_name }}
         path: ${{ matrix.artifact_name }}
